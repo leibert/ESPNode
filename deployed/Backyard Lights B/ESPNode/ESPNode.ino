@@ -1,4 +1,3 @@
-//Hardware definition file
 #include <ESP8266WiFi.h>
 
 //WIFI ssid and password in include file
@@ -13,37 +12,40 @@
 
 //Define IoS Node
 //description
-const char* desc = "Backyard Lights";
+const char* desc = "Garage Light";
 //# of devices
-const int numChannels = 3; //This is needed because C sucks. Should be 1 less than array size
+const int numChannels = 1; //This is needed because C sucks. Should be 1 less than array size
 
 
 //Channel Array Entry = {TYPE,IOa,IOb,IOc,STATEa,STATEb,STATEc,INVERTFLAG}
-//TYPE: 1=Digital Output,2=PWM, 3=RGB PWM, 11=Digital Input
+//TYPE: 1=Switch,2=PWM, 3=RGB PWM
 //RGB uses a,b,c; otherwise only use a
 //Invertflag used if HIGH is off
 //STATE should be init 0, used to keep track of last values
-
 //First array entry Channel[0] should be all zeros. Channels start at Channel[1] to align with CHnum being passed to function
-
-//Array of Channel Properties
 static int Channel[(numChannels + 1)][8];
-
-//Array of Channel Descriptions
 static String Channeldesc[(numChannels + 1)];
+//static char ChannelState[6][3] = {
+//  {0,0,0},
+//  {0, 0, 0},
+//  {0, 0, 0},
+//  {0, 0, 0},
+//  {0, 0, 0}
+//  };
 
-//Channel Init
+
+
 void initChannel(int CHID, int type, int pin1, int pin2, int pin3, int flag, String desc) {
   Serial.println("in init");
   Serial.println("initing " + String(CHID) + ": " + desc);
-  Channel[CHID][0] = type;  //TYPE CODE
-  Channel[CHID][1] = pin1;  //IO PIN A
-  Channel[CHID][2] = pin2;  //IO PIN B (for RGB)
-  Channel[CHID][3] = pin3;  //IO PIN C (for RGB)
-  Channel[CHID][4] = 0;     //Internal State Tracking for PIN A
-  Channel[CHID][5] = 0;     //Internal State Tracking for PIN B
-  Channel[CHID][6] = 0;     //Internal State Tracking for PIN C
-  Channel[CHID][7] = flag;  //Inverted IO flag
+  Channel[CHID][0] = type;
+  Channel[CHID][1] = pin1;
+  Channel[CHID][2] = pin2;
+  Channel[CHID][3] = pin3;
+  Channel[CHID][4] = 0;
+  Channel[CHID][5] = 0;
+  Channel[CHID][6] = 0;
+  Channel[CHID][7] = flag;
   Channeldesc[CHID] = desc;
 
 }
@@ -56,19 +58,20 @@ int BLULED = 2; //ESP BLUE LED FOR DEBUGGING
 
 
 
-//Setup timeout clock
+//setup timeout clock
 int mSec = 0;
 int seconds = 0;
 int minutes = 0;
+bool minuteFLAG = false;
+
+
 int timeoutperiod = 120; //timeout in seconds to turn off light, no timeout if 0
 
-bool minuteFLAG = false; //Flag to prevent instruction from firing multiple times a minute
-
-
-//Timer
+//timer
 int MCLKmsec, MCLKsec, MCLKminutes, MCLKhours;
 int TMRmsec, TMRsec, TMRminutes, TMRhours;
-int minutehold; //Variable to keep track of minute change
+
+int minutehold;
 
 //setup for command processing
 int chnum;
@@ -97,7 +100,7 @@ void startWIFI() {
     Serial.print(".");
   }
   Serial.println("");
-  Serial.println("WiFi connected"); //Connected to WiFi Network
+  Serial.println("WiFi connected");
 
   // Start the server
   server.begin();
@@ -124,121 +127,78 @@ void startWIFI() {
 
 
 
+///IO OPERATIONS
 
-////Convert 0-100 value to  0-255 value for Analog Write. Peg low/high to rails
 int PWMconvert(int val) {
-  int PWM = 0;
+  int PWM = 255;
   if (val < 5)
     PWM = 0;
   else if (val > 98)
-    PWM = 1023;
+    PWM = 255;
   else
-    PWM = (val / 100.0) * 1023.0;
+    PWM = (val / 100.0) * 255.0;
   return PWM;
 }
 
-void CHFade(int chnum, int newvalue, int decay){
-  if (decay>500)
-    decay=100;
-  int oldvalue = Channel[chnum][4];
-  int PWMval = PWMconvert(newvalue);
-  while(PWMval!=oldvalue){
-    if (PWMval>oldvalue)
-      oldvalue--;
-    else 
-      oldvalue++;
-    if (Channel[chnum][7] == 1) //check inversion flag
-      analogWrite(Channel[chnum][1], (100 - oldval)); //HIGH is off
-    else
-      analogWrite(Channel[chnum][1], oldval); //LOW is OFF
-    Channel[chnum][4]=oldval;
-    delay(decay);
-  }
-}
 
 
-void RGBFade(int chnum, int R, int G, int B, int decay) {
-  if (Channel[chnum][0] < 3) {
-    CHFade(chnum,R,decay);
-  }
-  else if(Channel[chnum][0]==3){
-    if (decay>500)
-      decay=100;
-    int oldvalueA = Channel[chnum][4];
-    int oldvalueB = Channel[chnum][4];
-    int oldvalueC = Channel[chnum][4];
-    int PWMvalA = PWMconvert(R);
-    int PWMvalB = PWMconvert(G);
-    int PWMvalC = PWMconvert(B);
-    while((PWMvalA!=oldvalueA)||(PWMvalB!=oldvalueB)||(PWMvalC!=oldvalueC)){
-      if (PWMvalA>oldvalueA)
-        oldvalueA--;
-      else if(PWMvalA<oldvalueA)
-        oldvalueA++;
+void RGBFade(int chnum, int R, int G, int B) {
+  //Get starting state
 
-      if (PWMvalB>oldvalueB)
-        oldvalueB--;
-      else if(PWMvalB<oldvalueB)
-        oldvalueB++;
-
-      if (PWMvalC>oldvalueC)
-        oldvalueC--;
-      else if(PWMvalC<oldvalueC)
-        oldvalueC++;
-        
-      if (Channel[chnum][7] == 1) //check inversion flag
-        analogWrite(Channel[chnum][1], (100 - oldvalA)); //HIGH is off
-        analogWrite(Channel[chnum][2], (100 - oldvalB)); //HIGH is off
-        analogWrite(Channel[chnum][3], (100 - oldvalC)); //HIGH is off
-      else
-        analogWrite(Channel[chnum][1], oldvalA); //LOW is OFF
-        analogWrite(Channel[chnum][2], oldvalB); //LOW is OFF
-        analogWrite(Channel[chnum][3], oldvalC); //LOW is OFF
-      Channel[chnum][4]=oldvalA;
-      Channel[chnum][5]=oldvalB;
-      Channel[chnum][6]=oldvalC;
-      
-      delay(decay);
-    }
+  if (chnum == 1) {
 
   }
 }
 
 
-//Switch Channel to Full-On
 void switchON(int chnum) {
-  if (Channel[chnum][0] < 3) { //Check to make sure Channel is single output
-    if (Channel[chnum][7] == 1) {//Check inversion flag
-      digitalWrite(Channel[chnum][1], LOW); 
+  //  Serial.println("ON");
+  //  Serial.println(chnum);
+  if (Channel[chnum][0] < 3) {
+    if (Channel[chnum][7] == 1) {
+      //      analogWrite(Channel[chnum][1], 0);
+      digitalWrite(Channel[chnum][1], LOW);
     }
     else {
+      //      analogWrite(Channel[chnum][1], 255);
       digitalWrite(Channel[chnum][1], HIGH);
     }
-    Channel[chnum][4] = 100; //update state tracking
+    Channel[chnum][4] = 100;
   }
-  else if (Channel[chnum][0] == 3) { //Channel is RGB, all channels need to be set to full on
-    if (Channel[chnum][7] == 1) { //check inversion flag
+  else if (Channel[chnum][0] == 3) {
+    if (Channel[chnum][7] == 1) {
+      analogWrite(Channel[chnum][1], 0);
+      analogWrite(Channel[chnum][2], 0);
+      analogWrite(Channel[chnum][3], 0);
       digitalWrite(Channel[chnum][1], LOW);
       digitalWrite(Channel[chnum][2], LOW);
       digitalWrite(Channel[chnum][3], LOW);
     }
     else {
+      analogWrite(Channel[chnum][1], 255);
+      analogWrite(Channel[chnum][2], 255);
+      analogWrite(Channel[chnum][3], 255);
       digitalWrite(Channel[chnum][1], HIGH);
       digitalWrite(Channel[chnum][2], HIGH);
       digitalWrite(Channel[chnum][3], HIGH);
     }
-    Channel[chnum][4] = 100; //update state tracking
+    Channel[chnum][4] = 100;
     Channel[chnum][5] = 100;
     Channel[chnum][6] = 100;
 
   }
 }
 
-//Switch Channel OFF, set to full off
-void switchOFF(int chnum) {
 
-  if (Channel[chnum][0] < 3) {  //Check to see if single output device
-    if (Channel[chnum][7] == 1) { //Check inversion flag
+void switchOFF(int chnum) {
+  //  Serial.println("OFF");
+  //  Serial.println(chnum);
+  //  Serial.println("SWITCHOFF" + chnum);
+  //  Serial.println(Channel[chnum][0]);
+  //  Serial.println(Channel[chnum][5]);
+
+  if (Channel[chnum][0] < 3) {
+    if (Channel[chnum][7] == 1) {
       //      analogWrite(Channel[chnum][1], 255);
       digitalWrite(Channel[chnum][1], HIGH);
     }
@@ -247,28 +207,32 @@ void switchOFF(int chnum) {
       //      analogWrite(Channel[chnum][1], 0);
       digitalWrite(Channel[chnum][1], LOW);
     }
-    Channel[chnum][4] = 0;  //update state tracking
+    Channel[chnum][4] = 0;
   }
-  else if (Channel[chnum][0] == 3) {  //RGB Channel
+  else if (Channel[chnum][0] == 3) {
     if (Channel[chnum][7] == 1) {
+      analogWrite(Channel[chnum][1], 255);
+      analogWrite(Channel[chnum][2], 255);
+      analogWrite(Channel[chnum][3], 255);
       digitalWrite(Channel[chnum][1], HIGH);
       digitalWrite(Channel[chnum][2], HIGH);
       digitalWrite(Channel[chnum][3], HIGH);
     }
     else {
+      analogWrite(Channel[chnum][1], 0);
+      analogWrite(Channel[chnum][2], 0);
+      analogWrite(Channel[chnum][3], 0);
       digitalWrite(Channel[chnum][1], LOW);
       digitalWrite(Channel[chnum][2], LOW);
       digitalWrite(Channel[chnum][3], LOW);
     }
-    Channel[chnum][4] = 0;  //update state tracking
+    Channel[chnum][4] = 0;
     Channel[chnum][5] = 0;
     Channel[chnum][6] = 0;
 
   }
 }
 
-
-//Turn-off all output channels
 void BLACKOUT() {
   Serial.println("BLACKOUT MODE");
   for (int i = 1; i <= numChannels; i++) {
@@ -276,15 +240,12 @@ void BLACKOUT() {
   }
 }
 
-//Turn-on all channels
 void FULLON() {
   for (int i = 1; i <= numChannels; i++) {
     switchON(i);
   }
 }
 
-
-//Toggle channel
 void ChannelTOGGLE(int chnum) { //Toggle Channel from OFF to ON (or ON to OFF)
   if (Channel[chnum][0] < 3) {  //Single Pin Channel, set pin to MAX or MIN
     if (Channel[chnum][4] < 30) { //PIN is mostly off, turn on
@@ -349,15 +310,10 @@ void ChannelDIM(int chnum, int value) {
   }
 }
 
-
-//Channel DIM, RGB values must be specified
 void RGBDIM(int chnum, int R, int G, int B) {
-  if (Channel[chnum][0] < 3) { //Single output channel, refer to correct function
-    ChannelDIM(chnum, R);
-  }
-  else if (Channel[chnum][0] == 3) {  //Valid RGB Channel
+  if (Channel[chnum][0] == 3) {
     Serial.println("RGB PWM MODE");
-    int RPWMval = PWMconvert(R); //Convert to PWM value for analog write
+    int RPWMval = PWMconvert(R);
     int GPWMval = PWMconvert(G);
     int BPWMval = PWMconvert(B);
 
@@ -375,43 +331,44 @@ void RGBDIM(int chnum, int R, int G, int B) {
     Channel[chnum][5] = G;
     Channel[chnum][6] = B;
   }
-
+  else {
+    ChannelDIM(chnum, R);
+  }
 }
 
-//Dim 1 color of an RGB Channel,
 void RGBSDIM(int chnum, int value, char color) {
   Serial.println("VALUE IS" + color);
   Serial.println("VALUE IS" + value);
-  if (Channel[chnum][0] < 3) { //Single output channel, refer to correct function
-    ChannelDIM(chnum, value);
-  }
-  else if (Channel[chnum][0] == 3) {// This is a valid RGB Cahnnel
+  if (Channel[chnum][0] == 3) {
     Serial.println("RGB single ch PWM MODE");
-    int PWMval = PWMconvert(value); //Convert to PWM value
-    if (Channel[chnum][7] == 1) { //Check inverstion flag
+    int PWMval = PWMconvert(value);
+    if (Channel[chnum][7] == 1) {
       PWMval = 100 - PWMval;
     }
 
-    switch (color) { //Select correct output based on color
-      case 'R': //Red
+    switch (color) {
+      case 'R':
         {
           analogWrite(Channel[chnum][1], PWMval);
           Channel[chnum][4] = value;
         }
         break;
-      case 'G': //Green
+      case 'G':
         {
           analogWrite(Channel[chnum][2], PWMval);
           Channel[chnum][5] = value;
         }
         break;
-      case 'B': //Blue
+      case 'B':
         {
           analogWrite(Channel[chnum][3], PWMval);
           Channel[chnum][6] = value;
         }
         break;
     }
+  }
+  else {
+    ChannelDIM(chnum, value);
   }
 
 }
@@ -435,6 +392,11 @@ void checkTimeout() {
 
 
 
+
+
+
+
+
 //simple statup init
 void initLamp() {
 
@@ -449,14 +411,14 @@ void initLamp() {
 void initChannelIO() { //iterate through Channel Array and setup all pins
   for (int i = 1; i <= numChannels; i++) {
     Serial.println("init ch" + String(i));
-    switch (Channel[i][0]) { //determine Channel type
-      case 3: //RGB OUTPUT
+    switch (Channel[i][0]) {
+      case 3:
         {
           Serial.println("PWM Channel");
-          pinMode(Channel[i][1], OUTPUT); //SET IOs as OUTPUTS
+          pinMode(Channel[i][1], OUTPUT);
           pinMode(Channel[i][2], OUTPUT);
           pinMode(Channel[i][3], OUTPUT);
-          if (Channel[i][5] == 1) { //CHECK INVERSION FLAG AND SET INITIAL STATE AS OFF
+          if (Channel[i][5] == 1) {
             digitalWrite(Channel[i][1], HIGH);
             digitalWrite(Channel[i][2], HIGH);
             digitalWrite(Channel[i][3], HIGH);
@@ -466,7 +428,7 @@ void initChannelIO() { //iterate through Channel Array and setup all pins
             digitalWrite(Channel[i][2], LOW);
             digitalWrite(Channel[i][3], LOW);
           }
-          Channel[i][4] = 0; //Zero out state tracker
+          Channel[i][4] = 0;
           Channel[i][5] = 0;
           Channel[i][6] = 0;
         }
@@ -623,9 +585,9 @@ void setup() {
 
   //  initChannelArray(6);
 //  initChannel(1, 3, 1, 3, 15, 0, "Right");
-  initChannel(3, 1, 10, 0, 0, 1, "Incandescent String");
-  initChannel(2, 3, 14, 12, 13, 0, "Right Flood");
-  initChannel(1, 3, 4, 5, 16, 0, "Left Flood");
+
+  initChannel(1, 3, 13, 12, 14, 0, "Garage Flood");
+ 
 
 
 
@@ -642,7 +604,8 @@ void setup() {
 
 //  analogWriteFreq(2700); //Set PWM clock, some ESPs seem fuckered about this
 //3000 is pretty good
-  analogWriteFreq(6000);
+//  analogWriteFreq(6000);
+  analogWriteFreq(3000);
 
   //  wdt_disable();
 

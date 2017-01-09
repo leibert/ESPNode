@@ -3,6 +3,15 @@
 //WIFI ssid and password in include file
 #include <passwords.h>
 
+//const String masterhost="ioshit.net";
+const String masterhost="192.168.0.31";
+
+
+const int httpPort = 80;
+
+char* host = "192.168.0.31";
+char* url = "/cgi-bin/IOS/ios.py";
+
 
 //define channel properties
 //CH# = Channel type (RGB, DIGital, DIMmer)
@@ -12,9 +21,13 @@
 
 //Define IoS Node
 //description
-const char* desc = "Motion test";
+const char* desc = "2nd Floor Beacon Lights";
+//description
+const char* nodename = "BEACON";
 //# of devices
-const int numChannels = 2; //This is needed because C sucks. Should be 1 less than array size
+const int numChannels = 5; //This is needed because C sucks. Should be 1 less than array size
+
+
 
 
 //Channel Array Entry = {TYPE,IOa,IOb,IOc,STATEa,STATEb,STATEc,INVERTFLAG}
@@ -373,6 +386,12 @@ void RGBSDIM(int chnum, int value, char color) {
 
 }
 
+void Burst(int chnum, int t){
+  switchON(chnum);
+  delay(t);
+  switchOFF(chnum);
+}
+
 
 //reset clock used for timeout
 void resetCLOCK() {
@@ -416,9 +435,15 @@ void initChannelIO() { //iterate through Channel Array and setup all pins
         {
             Serial.println("digital input");
             if (Channel[i][7] == 1)
+            {  
               pinMode(Channel[i][1], INPUT_PULLUP);   //set pin to input pullup
+              Serial.println("input_pullup");
+            }
             else
+            {
               pinMode(Channel[i][1], INPUT);           // set pin to input
+              Serial.println("input");
+            }
             Channel[i][4] = 0;
         }
         break;
@@ -491,6 +516,7 @@ String reportstatus() {
   Serial.println("in status report");
   //  String ip = WiFi.localIP().toString();
   String responsestring = "{\"espid\":\"" + WiFi.localIP().toString() + "\",";
+  responsestring.concat(responsebuilder("nodename", nodename) + ",");
   responsestring.concat(responsebuilder("desc", desc) + ",");
   //  responsestring.concat("\"channels\":\"1\",");
   responsestring.concat("\"channels\":[");
@@ -528,7 +554,10 @@ String reportstatus() {
         }
         break;
       default:
-        responsestring.concat(responsebuilder("type", "UNKNW"));
+        responsestring.concat(responsebuilder("type", "UNKNW")+",");
+        responsestring.concat(responsebuilder("SCH1", String(Channel[i][4])) + ",");
+        responsestring.concat(responsebuilder("SCH2", String(Channel[i][5])) + ",");
+        responsestring.concat(responsebuilder("SCH3", String(Channel[i][6])));
         break;
 
     }
@@ -586,10 +615,55 @@ void checkInputs(){
         case 11:
         {
           if(digitalRead(Channel[i][1])!=Channel[i][4]){
-              Serial.println("PIN CHANGE");
-              Serial.println(Channel[i][1]);
+              Serial.println("*******\nPIN CHANGE\n*******");
+              Serial.println(Channeldesc[i]);
               Serial.println(digitalRead(Channel[i][1]));
+//              client.println("window.console.log('PIN CHANGE');");
+              Serial.println(Channel[i][4]);
+              
               Channel[i][4]=digitalRead(Channel[i][1]);
+              Serial.println("SET TO:");
+              Serial.println(Channel[i][4]);
+//              Serial.println(digitalRead(Channel[i][1]));
+
+
+              if (!client.connect(host, httpPort)) {
+                Serial.println("connection failed");
+                return;
+              }
+//            
+//              // This will send the request to the server
+              client.print(String("GET ") + url + "?mode=updstate&KEY="+Channeldesc[i]+"&VALUE="+Channel[i][4]+" HTTP/1.1\r\n" +
+                           "Host: " + host + "\r\n" +
+                           "Connection: close\r\n\r\n");
+//
+//              Serial.println(String("GET ") + url + "?mode=updstate&KEY="+Channeldesc[i]+"&VALUE="+Channel[i][4]+" HTTP/1.1\r\n" +
+//                           "Host: " + host + "\r\n" +
+//                           "Connection: close\r\n\r\n");             
+              unsigned long timeout = millis();
+              while (client.available() == 0) {
+                if (millis() - timeout > 5000) {
+                  Serial.println(">>> Client Timeout !");
+                  client.stop();
+                  return;
+                }
+              }
+              
+
+              while (client.available()) {
+                //    Serial.print("asciR");
+                String line = client.readStringUntil('\r');
+                Serial.print(line);
+//                SIGNcontent += line;
+            }
+
+
+
+
+
+              
+              
+
               
             
           }
@@ -620,9 +694,15 @@ void setup() {
 //  initChannel(1, 3, 1, 3, 15, 0, "Right");
 //  initChannel(3, 1, 10, 0, 0, 1, "Incandescent String");
 //  initChannel(2, 3, 14, 12, 13, 0, "Right Flood");
-  initChannel(2, 11, 9, 0, 0, 0, "MOTION");
-  initChannel(1, 1, 2, 0, 0, 1, "LED");
+  initChannel(0, 0, 0, 0, 0, 0, "CTRL");
+  initChannel(1, 1, 13, 0, 0, 1, "BLUE");
+  initChannel(2, 1, 12, 0, 0, 1, "RED");
+  initChannel(3, 1, 14, 0, 0, 1, "GREEN");
+  initChannel(4, 1, 5, 0, 0, 1,  "BELL");
+  initChannel(5, 1, 16, 0, 0, 0, "DBG LED");
 
+  
+  
 
 
 
@@ -639,7 +719,8 @@ void setup() {
 
 //  analogWriteFreq(2700); //Set PWM clock, some ESPs seem fuckered about this
 //3000 is pretty good
-  analogWriteFreq(6000);
+//  analogWriteFreq(6000);
+  analogWriteFreq(10000);
 
   //  wdt_disable();
 
@@ -759,6 +840,7 @@ void loop() {
   if (request.indexOf("ACTION=") != -1) {
     action = request.substring((request.indexOf("ACTION=") + 7));
     Serial.println("ACTION IS " + action);
+    
     if (action.indexOf(".") != -1) {
       value = action.substring((action.indexOf(".") + 1), (action.indexOf("HTTP/") - 1));
       Serial.println("VALUE IS " + value);
@@ -779,6 +861,13 @@ void loop() {
   }
   else if (action.indexOf("BLACKOUT") != -1) {
     BLACKOUT();
+  }
+
+  else if (action.indexOf("BURST") != -1) {
+    Serial.println("BURST");
+    Serial.println(value);
+    Serial.println(value.toInt());
+    Burst(chnum,value.toInt());
   }
 
 
@@ -828,8 +917,8 @@ void loop() {
     client.println(""); // do not forget this one
     client.println("<!DOCTYPE HTML>");
     client.println("<html>");
-    client.println("<link rel='stylesheet' href='http://192.168.0.31/espserve/style.css'>");
-    client.println("<script type='text/javascript' src='http://192.168.0.31/espserve/scripts/jquery-1.11.1.js'></script>");
+    client.println("<link rel='stylesheet' href='http://"+masterhost+"/espserve/style.css'>");
+    client.println("<script type='text/javascript' src='http://"+masterhost+"/espserve/scripts/jquery-1.11.1.js'></script>");
     client.println("<body>");
     client.println("<div id='fallback'>");
     client.println("<a href='/LIGHTS=ON'>CLICK TO TURN LIGHTS ON</a>");
@@ -839,7 +928,7 @@ void loop() {
     client.println("<div id='panel'>");
     client.println("</div>");
     client.println("</body>");
-    client.println("<script type='text/javascript' src='http://192.168.0.31/espserve/scripts/IOSlocal.js'></script>");
+    client.println("<script type='text/javascript' src='http://"+masterhost+"/espserve/scripts/IOSlocal.js'></script>");
 
     //
     //  client.println("<br><br>");
@@ -854,7 +943,7 @@ void loop() {
     Serial.println("");
   }
 
-  //  delay(500);
+//    delay(100);
 }
 
 
