@@ -12,7 +12,7 @@
 
 //Define IoS Node
 //description
-const char* desc = "Hot Tub";
+const char* desc = "RGB Light";
 //# of devices
 const int numChannels = 1; //This is needed because C sucks. Should be 1 less than array size
 
