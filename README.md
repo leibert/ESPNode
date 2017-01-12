@@ -29,7 +29,7 @@ Same as the flood light controller, but using LED string lights that can be boug
 <img src="http://images.cwm.eml.cc/IOSstuff/IMG_20161108_120950782_BURST000_COVER_TOP.jpg?variant=small" width = "20%" height="20%">
 <img src="http://images.cwm.eml.cc/IOSstuff/IMG_20161108_120943637.jpg?variant=small" width = "20%" height="20%">
 <br>
-###**[Video of both LED strips and LED flood in action](https://goo.gl/photos/VyyPcG8X3BQQuoq5A)**###
+###**[Video of both LED strips and LED flood in action](https://goo.gl/photos/xwagtu2RMbbJqEAZA)**###
 </p>
 
 
@@ -45,7 +45,7 @@ Since the LED sign with the MBTA bus times I build couldn't be seen from our sec
 
 There are 3 bus routes nearby. The center indicators let you know which route is being displayed, with the arrows indicating outbound/inbound. The blink speed of the chevron indicates how close the next bus on the route/direction is getting.
 
-###**[Video of Bus-o-tron in action](https://goo.gl/photos/8sCQkAxLqr5SBfSn9)**###
+###**[Video of Bus-o-tron in action](https://goo.gl/photos/zDBsrZtRYsdp2fhJ7)**###
 
 
 This uses the framework of the ESPNode code, and can actually be controlled via the web UI and herded. If it has not recieved a command, it will automatically revert to running the bus tracking code. The bus times are provided by the (datacollectionbot)[https://github.com/leibert/DataCollectionBot] which pulls information every minute from the MBTA / NextBus API and stores it in a text file. The Bus-o-tron (and other devices in the house) reads the text file (stored on a raspberry pi) every 30 seconds. This minimizes the number of hits to the MBTA API from our IP address.
