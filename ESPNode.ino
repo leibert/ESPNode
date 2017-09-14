@@ -2,6 +2,7 @@
 
 //WIFI ssid and password in include file
 #include <passwords.h>
+#define PWMRANGE 1023
 
 
 //define channel properties
@@ -12,9 +13,9 @@
 
 //Define IoS Node
 //description
-const char* desc = "Backyard Lights Controller A";
+const char* desc = "Dev Controller";
 //# of devices
-const int numChannels = 3; //This is needed because C sucks. Should be 1 less than array size
+const int numChannels = 2; //This is needed because C sucks. Should be 1 less than array size
 
 
 //Channel Array Entry = {TYPE,IOa,IOb,IOc,STATEa,STATEb,STATEc,INVERTFLAG}
@@ -129,13 +130,13 @@ void startWIFI() {
 ///IO OPERATIONS
 
 int PWMconvert(int val) {
-  int PWM = 255;
+  int PWM = 1023;
   if (val < 5)
     PWM = 0;
   else if (val > 98)
-    PWM = 255;
+    PWM = 1023;
   else
-    PWM = (val / 100.0) * 255.0;
+    PWM = (val / 100.0) * 1023.0;
   return PWM;
 }
 
@@ -174,9 +175,9 @@ void switchON(int chnum) {
       digitalWrite(Channel[chnum][3], LOW);
     }
     else {
-      analogWrite(Channel[chnum][1], 255);
-      analogWrite(Channel[chnum][2], 255);
-      analogWrite(Channel[chnum][3], 255);
+      analogWrite(Channel[chnum][1], 1023);
+      analogWrite(Channel[chnum][2], 1023);
+      analogWrite(Channel[chnum][3], 1023);
       digitalWrite(Channel[chnum][1], HIGH);
       digitalWrite(Channel[chnum][2], HIGH);
       digitalWrite(Channel[chnum][3], HIGH);
@@ -198,7 +199,7 @@ void switchOFF(int chnum) {
 
   if (Channel[chnum][0] < 3) {
     if (Channel[chnum][7] == 1) {
-      //      analogWrite(Channel[chnum][1], 255);
+      //      analogWrite(Channel[chnum][1], 1023);
       digitalWrite(Channel[chnum][1], HIGH);
     }
 
@@ -210,9 +211,9 @@ void switchOFF(int chnum) {
   }
   else if (Channel[chnum][0] == 3) {
     if (Channel[chnum][7] == 1) {
-      analogWrite(Channel[chnum][1], 255);
-      analogWrite(Channel[chnum][2], 255);
-      analogWrite(Channel[chnum][3], 255);
+      analogWrite(Channel[chnum][1], 1023);
+      analogWrite(Channel[chnum][2], 1023);
+      analogWrite(Channel[chnum][3], 1023);
       digitalWrite(Channel[chnum][1], HIGH);
       digitalWrite(Channel[chnum][2], HIGH);
       digitalWrite(Channel[chnum][3], HIGH);
@@ -280,7 +281,7 @@ void ChannelDIM(int chnum, int value) {
         Serial.println("single PWM MODE");
         Serial.println(PWMval);
         if (Channel[chnum][7] == 1) //check inversion flag
-          analogWrite(Channel[chnum][1], (100 - PWMval)); //HIGH is off
+          analogWrite(Channel[chnum][1], (1023 - PWMval)); //HIGH is off
         else
           analogWrite(Channel[chnum][1], PWMval); //LOW is OFF
         Channel[chnum][4] = value;  //set state tracker
@@ -292,9 +293,9 @@ void ChannelDIM(int chnum, int value) {
         Serial.println("RGB PWM as one MODE");
         Serial.println(PWMval);
         if (Channel[chnum][7] == 1) {//check inversion flag
-          analogWrite(Channel[chnum][1], (100 - PWMval)); //set PWM on each pin assuming HIGH is off
-          analogWrite(Channel[chnum][2], (100 - PWMval));
-          analogWrite(Channel[chnum][3], (100 - PWMval));
+          analogWrite(Channel[chnum][1], (1023 - PWMval)); //set PWM on each pin assuming HIGH is off
+          analogWrite(Channel[chnum][2], (1023 - PWMval));
+          analogWrite(Channel[chnum][3], (1023 - PWMval));
         }
         else {
           analogWrite(Channel[chnum][1], 0);  //set PWM on each pin assuming HIGH is on
@@ -317,9 +318,9 @@ void RGBDIM(int chnum, int R, int G, int B) {
     int BPWMval = PWMconvert(B);
 
     if (Channel[chnum][7] == 1) {//check inversion flag
-      analogWrite(Channel[chnum][1], (100 - RPWMval)); //set PWM on each pin assuming HIGH is off
-      analogWrite(Channel[chnum][2], (100 - GPWMval));
-      analogWrite(Channel[chnum][3], (100 - BPWMval));
+      analogWrite(Channel[chnum][1], (1023 - RPWMval)); //set PWM on each pin assuming HIGH is off
+      analogWrite(Channel[chnum][2], (1023 - GPWMval));
+      analogWrite(Channel[chnum][3], (1023 - BPWMval));
     }
     else {
       analogWrite(Channel[chnum][1], RPWMval);  //set PWM on each pin assuming HIGH is on
@@ -342,9 +343,10 @@ void RGBSDIM(int chnum, int value, char color) {
     Serial.println("RGB single ch PWM MODE");
     int PWMval = PWMconvert(value);
     if (Channel[chnum][7] == 1) {
-      PWMval = 100 - PWMval;
+      PWMval = 1023 - PWMval;
     }
-
+    Serial.println("PMWval-");
+    Serial.println(PWMval);
     switch (color) {
       case 'R':
         {
@@ -582,10 +584,11 @@ void setup() {
   Serial.println("SERIAL OUTPUT ACTIVE");
 
   //  initChannelArray(6);
-  initChannel(1, 3, 16, 4, 5, 0, "Right Flood");
+  initChannel(1, 3, 14, 12, 13, 1, "TEST STRIP");
   initChannel(2, 3, 16, 4, 5, 0, "Left Flood");
-  initChannel(3, 1, 16, 4, 5, 0, "Incandescent Strings");
-
+  //initChannel(3, 1, 16, 4, 5, 0, "Incandescent Strings");
+  WiFi.hostname("devESP");
+  
   initChannelIO();
 
   BLACKOUT();
@@ -599,7 +602,7 @@ void setup() {
 
 //  analogWriteFreq(2700); //Set PWM clock, some ESPs seem fuckered about this
 //3000 is pretty good
-  analogWriteFreq(6000);
+  analogWriteFreq(3000);
 
   //  wdt_disable();
 
