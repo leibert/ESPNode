@@ -483,6 +483,7 @@ String reportstatus() {
   //  String ip = WiFi.localIP().toString();
   String responsestring = "{\"espid\":\"" + WiFi.localIP().toString() + "\",";
   responsestring.concat(responsebuilder("desc", desc) + ",");
+  responsestring.concat(responsebuilder("hostname", WiFi.hostname()) + ",");
   //  responsestring.concat("\"channels\":\"1\",");
   responsestring.concat("\"channels\":[");
 
@@ -585,9 +586,9 @@ void setup() {
 
   //  initChannelArray(6);
   initChannel(1, 3, 14, 12, 13, 1, "TEST STRIP");
-  initChannel(2, 3, 16, 4, 5, 0, "Left Flood");
-  //initChannel(3, 1, 16, 4, 5, 0, "Incandescent Strings");
-  WiFi.hostname("devESP");
+  //initChannel(2, 3, 16, 4, 5, 0, "Left Flood");
+  initChannel(2, 1, 16, 0, 0, 0, "Incandescent Strings");
+  WiFi.hostname("devesp");
   
   initChannelIO();
 
@@ -699,7 +700,7 @@ void loop() {
   Serial.println(request); //serial debug output
   client.flush(); //trash data
 
-  if (request.indexOf("init") != -1) {
+  if (request.indexOf("init") != -1 || request.indexOf("status") != -1) {
     client.println(reportstatus());
     return;
   }
