@@ -1,0 +1,57 @@
+<script
+  src="https://code.jquery.com/jquery-3.3.1.min.js"
+  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+  crossorigin="anonymous">
+</script>
+
+<div class="passthrough_info" id="init_config" style="display:none">
+~!@#$PASSTHROUGH~!@#$
+</div>
+
+<html>
+<head><title>Edit Configuration</title></head>
+<body>
+  Test Config Page
+  <form id="configform">
+    <input type="hidden" id="mode" value="updatecfg">
+    <input type="hidden" id="configsecret" value="defaulterd">
+    Node Name:
+    <input type="text" id="nodename"><br>
+
+    WIFI SSID:
+    <input type="text" id="WIFI-SSID"><br>
+
+    WIFI PW:
+    <input type="text" id="WIFI-PW"><br>
+
+    NODE DESCRIPTION:
+    <input type="text" id="nodedesc"><br>
+
+    IOS RESOURCES:
+    <input type="text" id="iosresources"><br>
+
+    Number of Channels:
+    <input type="number" id="numCH" min="1" max="128" />
+
+    <hr />
+
+    <h2>Channel Definitions:</h2>
+    <div id='chdefinitions'>
+
+    </div>
+
+
+    !!GO HERE!!
+
+
+    <input type="submit">
+  </form>
+</body>
+</html>
+<script type="text/javascript"
+  src="configpanel.js">
+</script>
+<script type="text/javascript">
+  console.log("page loaded");
+
+</script>
