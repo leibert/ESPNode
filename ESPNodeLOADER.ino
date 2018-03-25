@@ -28,25 +28,26 @@ String IOSResources = "ioshit.net";
 const byte numChannels = 128;
 byte numActiveChannels = 0;
 
-// setup timeout clock
-int MCLKmsec, MCLKsec, MCLKminutes, MCLKhours;
-int TMRmsec, TMRsec, TMRminutes, TMRhours;
-
-int mSec = 0;
-int seconds = 0;
-int minutes = 0;
-bool minuteFLAG = false;
-int minutehold;
+// // setup timeout clock
+// int MCLKmsec, MCLKsec, MCLKminutes, MCLKhours;
+// int TMRmsec, TMRsec, TMRminutes, TMRhours;
+//
+// int mSec = 0;
+// int seconds = 0;
+// int minutes = 0;
+// bool minuteFLAG = false;
+// int minutehold;
 
 // fade holds
-int fadetimeremaining = 0;
-String fadeCHs = "";
-float fadeRstep = 0;
-float fadeGstep = 0;
-float fadeBstep = 0;
-float fadingR = 0;
-float fadingG = 0;
-float fadingB = 0;
+String fading="";
+// int fadetimeremaining = 0;
+// String fadeCHs = "";
+// float fadeRstep = 0;
+// float fadeGstep = 0;
+// float fadeBstep = 0;
+// float fadingR = 0;
+// // float fadingG = 0;
+// // float fadingB = 0;
 unsigned long fadestart = millis();
 
 // configure ESP
@@ -223,66 +224,203 @@ void ChannelTOGGLE(int chnum) { // Toggle Channel from OFF to ON (or ON to OFF)
 }
 
 void FADEmaintainer() {
-	if (fadetimeremaining > 0) {
-    float fadeadvance = (millis()-fadestart);
-    fadestart=millis();
-    fadetimeremaining=fadetimeremaining-fadeadvance;
+	String fademaintainer=fading;
+	fading = "";
+	// Serial.println("FADEmaintainer");
 
 
-    Serial.println("fade advancing");
-    //Serial.println(millis());
-    //Serial.println(fadestart);
-    //Serial.println(fadeadvance);
-    //Serial.println(fadetimeremaining);
 
-		fadingR = fadingR + (fadeadvance * fadeRstep);
-		fadingG = fadingG + (fadeadvance * fadeGstep);
-		fadingB = fadingB + (fadeadvance * fadeBstep);
+	while (fademaintainer.length()>0) {
+		// Serial.print(fademaintainer);
+		String fadeaction = fademaintainer.substring(0,fademaintainer.indexOf("\n"));
+		fademaintainer = fademaintainer.substring((fademaintainer.indexOf("\n")+1));
 
-    Channel[chnum][4] =(int)fadingR;
-    Channel[chnum][5] =(int)fadingG;
-    Channel[chnum][6] =(int)fadingB;
+		//#CH,time,finalR,finalG,finalB,Rstep,Gstep,fadeBstep
+		int fadeCH = fadeaction.substring(1,fadeaction.indexOf(",")).toInt();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+		// Serial.println("Maintaining CH");
+		// Serial.println(fadeCH);
 
-		String maintainfadeCHs = fadeCHs;
-		while (maintainfadeCHs.length() > 0) {
-			// Serial.println(MaintainDMXCTRLChs);
-			int CC = maintainfadeCHs.substring(0, maintainfadeCHs.indexOf(",")).toInt();
-			// Serial.println(DMXCTRLChs.indexOf("," + 1));
-			maintainfadeCHs = maintainfadeCHs.substring((maintainfadeCHs.indexOf(",") + 1));
-//			Serial.println("Dimming " + String(CC));
-			Serial.println((int)fadingR);
-			//Serial.println((int)fadingG);
-			//Serial.println((int)fadingB);
-			RGBDIM(CC, (int)fadingR, (int)fadingG, (int)fadingB);
+		// Serial.println(fadeaction);
+		// Serial.println(fadeaction.substring(0,fadeaction.indexOf(",")).toInt());
+		int fadetime = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction =  fadeaction.substring(fadeaction.indexOf(",")+1);
+
+		unsigned long fadetimestarted = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction =  fadeaction.substring(fadeaction.indexOf(",")+1);
+
+		float fadeadvance = (millis()-fadetimestarted);
+
+
+		// Serial.println(fadetimeremaining);
+		// Serial.println("next parse");
+		// Serial.println(fadeaction);
+
+		int finalR = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+		// Serial.println("finalR"+String(finalR));
+
+		int finalG = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+
+    int finalB = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+		// Serial.println("finalG"+String(finalG));
+
+		float Rstep = fadeaction.substring(0,fadeaction.indexOf(",")).toFloat();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+
+		float Gstep = fadeaction.substring(0,fadeaction.indexOf(",")).toFloat();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+
+		float Bstep = fadeaction.substring(0,fadeaction.indexOf(",")).toFloat();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+
+		int Rstart = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+
+		int Gstart = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+
+		int Bstart = fadeaction.substring(0,fadeaction.indexOf(",")).toInt();
+		fadeaction = fadeaction.substring((fadeaction.indexOf(",")+1));
+
+		if (fadeadvance < fadetime) {
+
+			Serial.println("fadeadvance");
+			Serial.println(fadeadvance);
+
+			Serial.println(Channel[fadeCH][4]);
+			Serial.println(fadeadvance * Rstep);
+			Serial.println(fadeadvance * Gstep);
+			Serial.println(fadeadvance * Bstep);
+			Serial.println(Channel[fadeCH][4] + (fadeadvance * Rstep));
+
+			Channel[fadeCH][4] =Rstart + (fadeadvance * Rstep);
+			Channel[fadeCH][5] =Gstart + (fadeadvance * Gstep);
+			Channel[fadeCH][6] =Bstart + (fadeadvance * Bstep);
+			RGBDIM(fadeCH, Channel[fadeCH][4], Channel[fadeCH][5], Channel[fadeCH][6]);
+
+			fading += "#"+String(fadeCH)+","+String(fadetime)+","+String(fadetimestarted)+","+String(finalR)+","+String(finalG)+","+String(finalB)+",";
+      fading += String(Rstep,4)+","+String(Gstep,4)+","+String(Bstep,4)+","+String(Rstart)+","+String(Gstart)+","+String(Bstart)+"\n";
+			Serial.println(fading);
+
 		}
+		else{
+			Serial.println("FADE OVER");
+			RGBDIM(fadeCH, finalR, finalG, finalB);
+		}
+
+
 	}
-  else
-  {
-		fadeRstep = 0;
-		fadeGstep = 0;
-		fadeBstep = 0;
-		fadeCHs = "";
-	}
+
+
+	// if (fadetimeremaining > 0) {
+
+	//
+	//
+	//   // Serial.println("fade advancing");
+	//   //Serial.println(millis());
+	//   //Serial.println(fadestart);
+	//   //Serial.println(fadeadvance);
+	//   //Serial.println(fadetimeremaining);
+	//
+	//      fadingR = fadingR + (fadeadvance * fadeRstep);
+	//      fadingG = fadingG + (fadeadvance * fadeGstep);
+	//      fadingB = fadingB + (fadeadvance * fadeBstep);
+	//
+	//   Channel[chnum][4] =(int)fadingR;
+	//   Channel[chnum][5] =(int)fadingG;
+	//   Channel[chnum][6] =(int)fadingB;
+	//
+	//      String maintainfadeCHs = fadeCHs;
+	//      while (maintainfadeCHs.length() > 0) {
+	//              //Serial.println(MaintainDMXCTRLChs);
+	//              int CC = maintainfadeCHs.substring(0, maintainfadeCHs.indexOf(",")).toInt();
+	//              //Serial.println(DMXCTRLChs.indexOf("," + 1));
+	//              maintainfadeCHs = maintainfadeCHs.substring((maintainfadeCHs.indexOf(",") + 1));
+	//              // Serial.println("Dimming " + String(CC));
+	//              // Serial.println((int)fadingR);
+	//              // Serial.println((int)fadingG);
+	//              // Serial.println((int)fadingB);
+	//              RGBDIM(CC, (int)fadingR, (int)fadingG, (int)fadingB);
+	//      }
+	// }
+	// else
+	// {
+	//      fadeRstep = 0;
+	//      fadeGstep = 0;
+	//      fadeBstep = 0;
+	//      fadeCHs = "";
+	// }
 }
 
 void ChannelFADEset(int chnum, int finalRval, int finalGval, int finalBval,
                     int fadetime) {
-  Serial.println("Fade time is:"+String(fadetime));
 
-	fadeRstep = finalRval - Channel[chnum][4];
-	fadeGstep = finalGval - Channel[chnum][5];
-	fadeBstep = finalBval - Channel[chnum][6];
+	Serial.println("fade buffers");
+	Serial.println(fading);
+	//check to see if the channel is already fading and remove it
+	Serial.println(removeCHfromFade(chnum));
+	Serial.println(fading);
+
+	//Calculate fade parameters
+	Serial.println("Fade time is:"+String(fadetime));
+
+	float fadeRstep = finalRval - Channel[chnum][4];
+	float fadeGstep = finalGval - Channel[chnum][5];
+	float fadeBstep = finalBval - Channel[chnum][6];
 	Serial.println("fade difference is: " + String(fadeRstep,4));
+	Serial.println("fade difference is: " + String(fadeGstep,4));
+	Serial.println("fade difference is: " + String(fadeBstep,4));
 
 	fadeRstep = fadeRstep / (float)fadetime;
 	fadeGstep = fadeGstep / (float)fadetime;
 	fadeBstep = fadeBstep / (float)fadetime;
 	Serial.println("fade step is: " + String(fadeRstep,4));
+	Serial.println("fade step is: " + String(fadeGstep,4));
+	Serial.println("fade step is: " + String(fadeBstep,4));
 
-	fadetimeremaining = fadetime;
-  fadestart=millis();
-	fadeCHs += String(chnum) + ",";
 
+	//fadeCHs += String(chnum) + ",";
+
+
+	fading += "#"+String(chnum)+","+String(fadetime)+","+String(millis())+","+String(finalRval)+","+String(finalGval)+","+String(finalBval)+",";
+  fading += String(fadeRstep,4)+","+String(fadeGstep,4)+","+String(fadeBstep,4)+","+String(Channel[chnum][4])+","+String(Channel[chnum][5])+","+String(Channel[chnum][6])+"\n";
+	Serial.println(fading);
+
+//#CH,fadetime,timestarted, finalR,finalG,finalB,Rstep,Gstep,fadeBstep,Rstart,Gstart,Bstart
+
+
+
+
+
+}
+
+
+int removeCHfromFade(int CH){
+	Serial.println("Cheking if channel is already fading");
+	Serial.println(fading);
+	Serial.println("#"+String(CH)+",");
+	int CHcmdpos = fading.indexOf(("#"+String(CH)+","));
+	Serial.println(CHcmdpos);
+	if(fading.indexOf(("#"+String(CH)+","))>=0) {
+		Serial.println("Channel in Fade");
+		Serial.println(fading);
+		String fadingA=fading.substring(0,fading.indexOf(("#"+String(CH)+",")));
+		Serial.println("FADINGA"+fadingA);
+		String fadingB=fading.substring(fading.indexOf(("#"+String(CH)+",")));
+		Serial.println("FADINGB"+fadingB);
+		fadingB = fadingB.substring(fadingB.indexOf("\n"));
+		Serial.println("FADINGB2"+fadingB);
+		fading = fadingA+fadingB;
+		Serial.println(fading);
+		return 1;
+	}
+
+
+	Serial.println("Channel not present");
+	return 0;
 }
 
 // Dim all outputs on Channel
@@ -343,7 +481,7 @@ void ChannelDIM(int chnum, int value) {
 }
 
 void RGBDIM(int chnum, int R, int G, int B) {
-	// Serial.println("RGB PWM MODE");
+	Serial.println("RGB PWM MODE"+String(R)+"/"+String(G)+"/"+String(B));
 	int RPWMval = PWMconvert(R);
 	int GPWMval = PWMconvert(G);
 	int BPWMval = PWMconvert(B);
@@ -542,6 +680,15 @@ void initDMX(int CH, int Profile, int Start) {
 		Channel[CH][1] = Start + 1;
 		Channel[CH][2] = Start + 3;
 		Channel[CH][3] = Start + 2;
+		Serial.println("adding control channel " + String(Start));
+		DMXCTRLChs += (String(Start) + ",");
+	} break;
+	case 2: // LED PAR LIGHT
+	{
+		Serial.println("init small amazon style light#" + String(CH));
+		Channel[CH][1] = Start + 1;
+		Channel[CH][2] = Start + 2;
+		Channel[CH][3] = Start + 3;
 		Serial.println("adding control channel " + String(Start));
 		DMXCTRLChs += (String(Start) + ",");
 	} break;
@@ -829,11 +976,11 @@ void processNodeRequest(String action = "", int chnum = 0, String value = "") {
 		ChannelFADEset(chnum, finalRval.toInt(), finalGval.toInt(),
 		               finalBval.toInt(), timestep.toInt());
 	}
-  else if (action.indexOf("FADE") != -1) {
-    String finalval = value.substring(0, 2);
-    String timestep = value.substring(6);
-    ChannelFADEset(chnum, finalval.toInt(), 0, 0, timestep.toInt());
-  }
+	else if (action.indexOf("FADE") != -1) {
+		String finalval = value.substring(0, 2);
+		String timestep = value.substring(6);
+		ChannelFADEset(chnum, finalval.toInt(), 0, 0, timestep.toInt());
+	}
 }
 
 void DMXmaintenance() {
@@ -870,11 +1017,11 @@ void loop() {
 	// process DMX control channels
 
 
-	if (DMXpresent and (millis()%100==0)) //helps to slow down to avoid overwhelming DMX devices
-    DMXmaintenance();
+	if (DMXpresent and (millis()%50==0)) //helps to slow down to avoid overwhelming DMX devices
+		DMXmaintenance();
 
-  if (fadeCHs != "")
-    FADEmaintainer();
+	if (fading != "")
+		FADEmaintainer();
 
 	// Check if a client has connected
 	client = server.available();
@@ -888,6 +1035,7 @@ void loop() {
 	////////////////////////////AFTER THIS ONLY RUNS IF CLIENT CONNECTED
 	// Read the first line of the request
 	Serial.println("connection");
+	client.setTimeout(100);
 	String request = client.readStringUntil('\r');
 
 	Serial.println(request); // serial debug output
@@ -1011,15 +1159,15 @@ void setup() {
 	//  analogWriteFreq(2700); //Set PWM clock, some ESPs seem fuckered about this
 	analogWriteFreq(3000);
 
-	MCLKmsec = 0;
-	MCLKsec = 0;
-	MCLKminutes = 0;
-	MCLKhours = 0;
-
-	TMRmsec = 0;
-	TMRsec = 0;
-	TMRminutes = 0;
-	TMRhours = 0;
+	// MCLKmsec = 0;
+	// MCLKsec = 0;
+	// MCLKminutes = 0;
+	// MCLKhours = 0;
+  //
+	// TMRmsec = 0;
+	// TMRsec = 0;
+	// TMRminutes = 0;
+	// TMRhours = 0;
 
 	Serial.println("ESP LOAD COMPLETE");
 
