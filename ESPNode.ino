@@ -868,6 +868,11 @@ void serve404() {
 	client.println("HTTP/1.1 404 Not Found");
 }
 
+void serve200() {
+	client.println("HTTP/1.1 200 OK");
+}
+
+
 // connect to wifi
 void startWIFI() {
 	Serial.println();
@@ -1112,7 +1117,12 @@ void loop() {
 				// Serial.println(request);
 				moreRequests = true;
 			} else
-				moreRequests = false; // nothing else to do, exit
+        //nothing else to do
+        serve200(); //serve 200
+        moreRequests = false; //and exit
+
+
+
 		}
 
 		// otherwise it may be a webrequest

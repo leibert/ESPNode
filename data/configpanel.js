@@ -181,7 +181,7 @@ $("form").submit(function(event) {
 // ##CHANNELS-END##\n";
 
 
-      $.post("http://192.168.0.90/updconfig", configstring, null, "text");
+      $.post("/updconfig", configstring, null, "text");
 
       parseconfig();
       changeCHvisbility();
@@ -337,7 +337,7 @@ $("form").submit(function(event) {
 
     function getconfig() {
       console.log("Getting initial config");
-      $.get("http://192.168.0.90/cfginit", dataType = "text", function(data) {
+      $.get("/cfginit", dataType = "text", function(data) {
 
         config = data.toString();
         parseconfig();
