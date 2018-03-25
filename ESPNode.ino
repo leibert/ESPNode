@@ -287,14 +287,14 @@ void FADEmaintainer() {
 
 		if (fadeadvance < fadetime) {
 
-			Serial.println("fadeadvance");
-			Serial.println(fadeadvance);
-
-			Serial.println(Channel[fadeCH][4]);
-			Serial.println(fadeadvance * Rstep);
-			Serial.println(fadeadvance * Gstep);
-			Serial.println(fadeadvance * Bstep);
-			Serial.println(Channel[fadeCH][4] + (fadeadvance * Rstep));
+			// Serial.println("fadeadvance");
+			// Serial.println(fadeadvance);
+      //
+			// Serial.println(Channel[fadeCH][4]);
+			// Serial.println(fadeadvance * Rstep);
+			// Serial.println(fadeadvance * Gstep);
+			// Serial.println(fadeadvance * Bstep);
+			// Serial.println(Channel[fadeCH][4] + (fadeadvance * Rstep));
 
 			Channel[fadeCH][4] =Rstart + (fadeadvance * Rstep);
 			Channel[fadeCH][5] =Gstart + (fadeadvance * Gstep);
@@ -303,7 +303,7 @@ void FADEmaintainer() {
 
 			fading += "#"+String(fadeCH)+","+String(fadetime)+","+String(fadetimestarted)+","+String(finalR)+","+String(finalG)+","+String(finalB)+",";
       fading += String(Rstep,4)+","+String(Gstep,4)+","+String(Bstep,4)+","+String(Rstart)+","+String(Gstart)+","+String(Bstart)+"\n";
-			Serial.println(fading);
+			// Serial.println(fading);
 
 		}
 		else{
@@ -481,7 +481,7 @@ void ChannelDIM(int chnum, int value) {
 }
 
 void RGBDIM(int chnum, int R, int G, int B) {
-	Serial.println("RGB PWM MODE"+String(R)+"/"+String(G)+"/"+String(B));
+	//Serial.println("RGB PWM MODE"+String(R)+"/"+String(G)+"/"+String(B));
 	int RPWMval = PWMconvert(R);
 	int GPWMval = PWMconvert(G);
 	int BPWMval = PWMconvert(B);
