@@ -50,6 +50,12 @@ String fading="";
 // // float fadingB = 0;
 unsigned long fadestart = millis();
 
+//entire buffer has to be maintened in case there is a looping command
+String commandbuffer="";
+
+//Position in command buffer, 0=empty or not active (completion without loop)
+int commandbufferpos=0;
+
 // configure ESP
 int BLULED = 2; // ESP BLUE LED FOR DEBUGGING
 
@@ -63,6 +69,8 @@ String Channeldesc[numChannels];
 
 bool DMXpresent = false;
 String DMXCTRLChs = "";
+
+int cmdwaitms=0;
 
 // initChannel - Store config data into 2D array
 //
@@ -100,22 +108,22 @@ int PWMconvert(int val) {
 }
 
 void switchON(int chnum) {
-	//  Serial.println("ON");
-	//  Serial.println(chnum);
+	//check to see if it is a digital or analog output
 	if (Channel[chnum][0] < 3) {
+    //is digital...check inversion
 		if (Channel[chnum][7] == 1) {
-			//      analogWrite(Channel[chnum][1], 0);
 			digitalWrite(Channel[chnum][1], LOW);
 		} else {
-			//      analogWrite(Channel[chnum][1], 255);
 			digitalWrite(Channel[chnum][1], HIGH);
 		}
 		Channel[chnum][4] = 100;
 	} else if (Channel[chnum][0] == 3) {
+    //is analog check inversion and set PWM duty cycle to 0
 		if (Channel[chnum][7] == 1) {
 			analogWrite(Channel[chnum][1], 0);
 			analogWrite(Channel[chnum][2], 0);
 			analogWrite(Channel[chnum][3], 0);
+      //fixes bug on nodemcu
 			digitalWrite(Channel[chnum][1], LOW);
 			digitalWrite(Channel[chnum][2], LOW);
 			digitalWrite(Channel[chnum][3], LOW);
@@ -127,11 +135,13 @@ void switchON(int chnum) {
 			digitalWrite(Channel[chnum][2], HIGH);
 			digitalWrite(Channel[chnum][3], HIGH);
 		}
+    //set status variable for tracking
 		Channel[chnum][4] = 100;
 		Channel[chnum][5] = 100;
 		Channel[chnum][6] = 100;
 
 	} else if (Channel[chnum][0] == 21) {
+    //is a DMX
 
 		dmx.write(Channel[chnum][1], 255);
 		dmx.write(Channel[chnum][2], 255);
@@ -143,25 +153,23 @@ void switchON(int chnum) {
 	}
 }
 
+//switch Channel off
 void switchOFF(int chnum) {
-	//  Serial.println("OFF");
-	//  Serial.println(chnum);
-	//  Serial.println("SWITCHOFF" + chnum);
-	//  Serial.println(Channel[chnum][0]);
-	//  Serial.println(Channel[chnum][5]);
 
-	if (Channel[chnum][0] < 3) {
-		if (Channel[chnum][7] == 1) {
+
+  //check device type and process off command accordingly
+  if (Channel[chnum][0] < 3) { //single output channel
+		if (Channel[chnum][7] == 1) { //inverted output
 			//      analogWrite(Channel[chnum][1], 255);
 			digitalWrite(Channel[chnum][1], HIGH);
 		}
 
-		else {
+		else { //normal output
 			//      analogWrite(Channel[chnum][1], 0);
 			digitalWrite(Channel[chnum][1], LOW);
 		}
 		Channel[chnum][4] = 0;
-	} else if (Channel[chnum][0] == 3) {
+	} else if (Channel[chnum][0] == 3) { //RGB device
 		if (Channel[chnum][7] == 1) {
 			analogWrite(Channel[chnum][1], 255);
 			analogWrite(Channel[chnum][2], 255);
@@ -181,7 +189,7 @@ void switchOFF(int chnum) {
 		Channel[chnum][5] = 0;
 		Channel[chnum][6] = 0;
 
-	} else if (Channel[chnum][0] == 21) {
+	} else if (Channel[chnum][0] == 21) { //dmx device
 
 		dmx.write(Channel[chnum][1], 0);
 		dmx.write(Channel[chnum][2], 0);
@@ -193,15 +201,17 @@ void switchOFF(int chnum) {
 	}
 }
 
+//blackout command turns off all channels
 void BLACKOUT() {
 	Serial.println("BLACKOUT MODE");
-	for (int i = 1; i <= numChannels; i++) {
+	for (int i = 1; i <= numChannels; i++) { //iterate through activated channels
 		switchOFF(i);
 	}
 }
 
+//turn all channels on to full
 void FULLON() {
-	for (int i = 1; i <= numChannels; i++) {
+	for (int i = 1; i <= numChannels; i++) { //iterate through activated channels
 		switchON(i);
 	}
 }
@@ -222,6 +232,74 @@ void ChannelTOGGLE(int chnum) { // Toggle Channel from OFF to ON (or ON to OFF)
 			switchOFF(chnum); // turn channel off
 	}
 }
+
+
+
+//retrieve a preset (presetID) from SPIFFS memory
+void readPreset(int presetID){
+  File f = SPIFFS.open("/presets.dat", "r");
+  //clear command buffer
+  commandbuffer="";
+  while (f.available()){
+    String line = f.readStringUntil('\n') + '\n';
+    //found reqeusted presets
+    if (line.startsWith("~~~~~~"+String(presetID))){
+      Serial.println("PRESET FOUND");
+      while (f.available()){
+        line = f.readStringUntil('\n') + '\n';
+        //read until end of preset
+        if (!line.startsWith("######")){
+          //load preset into command buffer
+          commandbuffer += f.readStringUntil('\n') + '\n';
+        }
+      }
+    }
+  }
+  //set pointer to first line of buffer
+  commandbufferpos=1;
+}
+
+
+void setCommandWait(int wait){
+  Serial.println("setting wait to "+String(wait)+" ms");
+  cmdwaitms=wait;
+}
+
+
+void processCMDbuffer(){
+  Serial.println("Command Buffer");
+  String line = commandbuffer;
+  while(line!=""){
+    for(int i=0;i<commandbufferpos;i++){
+      line=line.substring((line.indexOf("\n")+2));
+      Serial.println("new line"+String(i));
+      Serial.println(line);
+    }
+    //check if there are following lines, if so trim
+    if(line.indexOf("\n")>-1){
+      line=line.substring(0,line.indexOf("\n"));
+    }
+
+    if(line.startsWith("WAIT")){
+      setCommandWait(line.substring(4).toInt());
+    }
+
+  }
+}
+
+void readCommands(String commands){
+  //read passed commandstring into buffer
+  commandbuffer=commands;
+
+  //set buffer point to 1
+  commandbufferpos=1;
+}
+
+
+
+
+
+
 
 void FADEmaintainer() {
 	String fademaintainer=fading;
@@ -665,6 +743,33 @@ String sendConfigfile() {
 	}
 }
 
+
+String sendPresets() {
+	File f = SPIFFS.open("/presets.dat", "r");
+	if (!f) {
+		Serial.println("file open failed");
+		return "FILE OPEN FAILED";
+	} else {
+		String configfile = "";
+		Serial.println("====== Reading from SPIFFS file =======");
+		while (f.available())
+			configfile += f.readStringUntil('\n') + '\n';
+		return configfile;
+	}
+}
+
+void writePresetsfile(String newpresets) {
+	File f = SPIFFS.open("/presets.dat", "w+");
+	if (!f) {
+		Serial.println("file open failed");
+	} else {
+		f.print(newpresets);
+		Serial.println("file updated with:");
+		Serial.println(newpresets);
+	}
+}
+
+
 void initDMX(int CH, int Profile, int Start) {
 	DMXpresent = true;
 
@@ -832,7 +937,7 @@ void processconfigfile(File f) {
 	}
 }
 
-void serveHTMLfromSPIFFS(String filename,
+void servefilefromSPIFFS(String filename,
                          String passthrough = "NO DATA PASSED") {
 	File f = SPIFFS.open("/" + filename, "r");
 	if (!f) {
@@ -841,10 +946,15 @@ void serveHTMLfromSPIFFS(String filename,
 	} else {
 		Serial.println("====== Reading " + filename + " from SPIFFS =======");
 	}
+
+
+  Serial.println("file size is :"+String(f.size()));
 	// START SENDING PAGE
 	// DEFAULT HTTP HEADER
 	client.println("HTTP/1.1 200 OK");
+  //client.println("Content-Length: "+String(f.size()));
 	client.println("Content-Type: text/html");
+  client.println("Connection: close");
 	client.println(""); // do not forget this one
 
 	// read out HTML file
@@ -858,18 +968,25 @@ void serveHTMLfromSPIFFS(String filename,
 			client.print(passthrough);
 		} else
 			client.print(line);
+      yield();
+      client.flush();
 	}
 
-	delay(5);
+	delay(10);
+  client.stop();
 	Serial.println("Client disconnected / Page Sent");
 }
 
 void serve404() {
+  Serial.println("404 Error");
 	client.println("HTTP/1.1 404 Not Found");
+  client.stop();
 }
 
 void serve200() {
+  Serial.println("200 Repsonse");
 	client.println("HTTP/1.1 200 OK");
+  client.stop();
 }
 
 
@@ -909,19 +1026,19 @@ void webserver(String request) {
 		String page =
 			request.substring(request.indexOf("/") + 1, request.indexOf(".html"));
 		Serial.println("looking for page" + page);
-		serveHTMLfromSPIFFS(page + ".html");
+		servefilefromSPIFFS(page + ".html");
 	} else if (request.indexOf(".js") > 0) {
 		String script =
 			request.substring(request.indexOf("/") + 1, request.indexOf(".js"));
-		serveHTMLfromSPIFFS(script + ".js");
+		servefilefromSPIFFS(script + ".js");
 	} else if (request.indexOf("/ HTTP/1.1") > 0) {
-		serveHTMLfromSPIFFS("index.html");
+		servefilefromSPIFFS("index.html");
 	} else {
 		serve404();
 	}
 }
 
-void processNodeRequest(String action = "", int chnum = 0, String value = "") {
+void processCHRequest(String action = "", int chnum = 0, String value = "") {
 	Serial.println("processing node request");
 	Serial.println(chnum);
 	Serial.println(action);
@@ -1022,7 +1139,7 @@ void loop() {
 	// process DMX control channels
 
 
-	if (DMXpresent and (millis()%50==0)) //helps to slow down to avoid overwhelming DMX devices
+	if (DMXpresent) //helps to slow down to avoid overwhelming DMX devices
 		DMXmaintenance();
 
 	if (fading != "")
@@ -1043,9 +1160,13 @@ void loop() {
 	client.setTimeout(100);
 	String request = client.readStringUntil('\r');
 
+
 	Serial.println(request); // serial debug output
 
-	bool moreRequests = true;
+  bool moreRequests = true;
+
+  if(request == "")
+	 moreRequests = false; // just kidding
 
 	yield();
 
@@ -1053,17 +1174,19 @@ void loop() {
 
 		// Extract any parameters for a node request
 		// Get Channel
+    Serial.println("REQ:");
+    Serial.println(request);
 		int chnum = 1;
 		if (request.indexOf("CH=") != 1) {
 			String t = request.substring((request.indexOf("CH=") + 3),
 			                             (request.indexOf("CH=") + 4));
-			// Serial.println("COMMAND FOR CH:" + t);
+			Serial.println("COMMAND FOR CH:" + t);
 			chnum = t.toInt();
 		}
 
 		if (request.indexOf("updconfig") != -1) {
 			client.println(request);
-			client.setTimeout(1000);
+		//	client.setTimeout(1000);
 			String newconfig = client.readString();
 			if (newconfig.indexOf("CONFIGSTRING")) {
 				newconfig =
@@ -1080,13 +1203,35 @@ void loop() {
 
 			break;
 		}
+    else if (request.indexOf("updpresets") != -1) {
+			client.println(request);
+		//	client.setTimeout(1000);
+			String newpresets = client.readString();
+			if (newpresets.indexOf("PRESETUPDATE##")) {
+				newpresets = newpresets.substring(newpresets.indexOf("PRESETUPDATE##") + 14);
+				Serial.println("New Presets Recieved");
+				Serial.println(newpresets);
+				writePresetsfile(newpresets);
 
-		if (request.indexOf("cfginit") != -1) {
+			} else {
+				client.println("NO PRESET UPDATES PRESENT");
+				Serial.println("NO PRESET UPDATES PRESENT");
+			}
+
+			break;
+		}
+
+		else if (request.indexOf("cfginit") != -1) {
 			client.println(sendConfigfile());
 			break;
 		}
 
-		if (request.indexOf("init") != -1 || request.indexOf("status") != -1) {
+    else if (request.indexOf("presetinit") != -1) {
+      client.println(sendPresets());
+      break;
+    }
+
+		else if (request.indexOf("init") != -1 || request.indexOf("status") != -1) {
 			client.println(reportstatus());
 			break;
 		}
@@ -1108,32 +1253,36 @@ void loop() {
 			}
 		}
 
-		// if there is an node action process it
-		if (action != "none") {
-			processNodeRequest(action, chnum, value);
+    if (action == "CMDS"){
+      readCommands(value);
+    }
+    // if there is an node action process it
+		else if (action != "none") {
+			processCHRequest(action, chnum, value);
 			if (request.indexOf("+") != -1) { // there is a command following
 				request = request.substring(request.indexOf("+") + 1);
-				// Serial.println("NEXT COMMAND");
-				// Serial.println(request);
+				Serial.println("NEXT COMMAND");
+				Serial.println(request);
 				moreRequests = true;
-			} else
+			} else{
         //nothing else to do
+        Serial.println("Actions done");
         serve200(); //serve 200
         moreRequests = false; //and exit
-
-
+        client.stop();
+      }
 
 		}
-
 		// otherwise it may be a webrequest
 		else {
+      Serial.println("Service webpage");
+      Serial.println(request);
 			webserver(request);
-			moreRequests = false;
+      moreRequests = false;
+      delay(1);
+      client.stop();
 		}
-
-		yield();
 	}
-	client.flush(); // trash data
 }
 
 // Setup/Init on Startup
@@ -1141,6 +1290,7 @@ void loop() {
 ////SETUP ARDUINO ON POWERUP
 //////////
 void setup() {
+
 
 	Serial.begin(500000); // Start debug serial
 	delay(10);      // wait, because things break otherwise

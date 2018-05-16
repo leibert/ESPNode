@@ -1,8 +1,3 @@
-//function changenumCH(){
-//  numCH = getElementbyId("numCHinput").value;
-//  console.log("number of channels changed to"+numCH);
-//}
-
 var config = "NO DATA RECIEVED";
 
 
@@ -355,4 +350,4 @@ $("form").submit(function(event) {
     }
 
 
-    init(); console.log("configpanel.js loaded")
+    init(); console.log("configpanel.js loaded");
