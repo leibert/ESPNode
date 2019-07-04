@@ -1,278 +1,158 @@
-#include "espDMX.h"
 #include <ESP8266WiFi.h>
-#include <FS.h>
-#include <passwords.h>
+#include <WiFiClient.h>
+#include <ESP8266WiFiMulti.h>
+#include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
+#include <FS.h> // Include the SPIFFS library
+#include "espDMX.h"
 
-#define PWMRANGE 255
-
-DMXESPSerial dmx;
-
-// Default values, may be overwritten by SPIFF config.dat
-// Node Name, will be set as hostname
-String nodename = "DevMEMTEST";
-
+//GLOBAL CONFIG VARIABLES (filled out by SPIFF read of config.dat)
+char nodename[] = "DevMEMTEST";
 // Node Description
-String nodedesc = "Development Memory Test";
+char nodedesc[] = "Development Memory Test";
 
 // WIFI Credentials. Set default as values in passwords.h
-String WIFIssid = ssid;
-String WIFIpassword = password;
+char WIFIssid[] = "";
+char WIFIpassword[] = "";
 
-// init WiFi propoerties
-WiFiClient client;
-WiFiServer server(80);
+//remote location of IOS Files
+char IOSResources[] = "ioshit.net";
 
-String IOSResources = "ioshit.net";
+ESP8266WiFiMulti wifiMulti; // Create an instance of the ESP8266WiFiMulti class, called 'wifiMulti'
 
-//# of devices
-const byte numChannels = 128;
-byte numActiveChannels = 0;
+ESP8266WebServer server(80); // Create a webserver object that listens for HTTP request on port 80
 
-// // setup timeout clock
-// int MCLKmsec, MCLKsec, MCLKminutes, MCLKhours;
-// int TMRmsec, TMRsec, TMRminutes, TMRhours;
-//
-// int mSec = 0;
-// int seconds = 0;
-// int minutes = 0;
-// bool minuteFLAG = false;
-// int minutehold;
+String getContentType(String filename); // convert the file extension to the MIME type
+bool handleFileRead(String path);		// send the right file to the client (if it exists)
 
-// fade holds
-String fading = "";
-// int fadetimeremaining = 0;
-// String fadeCHs = "";
-// float fadeRstep = 0;
-// float fadeGstep = 0;
-// float fadeBstep = 0;
-// float fadingR = 0;
-// // float fadingG = 0;
-// // float fadingB = 0;
-unsigned long fadestart = millis();
-
-//entire buffer has to be maintened in case there is a looping command
-String commandbuffer = "";
-
-//Position in command buffer, 0=empty or not active (completion without loop)
-int commandbufferpos = 0;
-
-// configure ESP
-int BLULED = 2; // ESP BLUE LED FOR DEBUGGING
-
-// setup for command processing
-int chnum;
-String action, value;
-
-// Channel Array, to be populated from configuration file
-int Channel[numChannels][8];
-String Channeldesc[numChannels];
-
-bool DMXpresent = false;
-String DMXCTRLChs = "";
-
-int cmdwaitms = 0;
-
-void servefilefromSPIFFS(String filename,
-						 String passthrough = "NO DATA PASSED")
+//read config file
+void processconfigfile(File f)
 {
-	File f = SPIFFS.open("/" + filename, "r");
-	if (!f)
-	{
-		Serial.println("opening " + filename + " failed");
-		return;
-	}
-	else
-	{
-		Serial.println("====== Reading " + filename + " from SPIFFS =======");
-	}
-
-	Serial.println("file size is :" + String(f.size()));
-	// START SENDING PAGE
-	// DEFAULT HTTP HEADER
-	client.println("HTTP/1.1 200 OK");
-	//client.println("Content-Length: "+String(f.size()));
-	client.println("Content-Type: text/html");
-	client.println("Connection: close");
-	client.println(""); // do not forget this one
-
-	// read out HTML file
-	String line = "";
+	// read file line by line
 	while (f.available())
 	{
-		line = f.readStringUntil('\r');
-		// Serial.print(line);
-		if (line.indexOf("~!@#$PASSTHROUGH~!@#$") > 0)
+		String line = f.readStringUntil('\n');
+		Serial.println(line);
+
+		if (line.startsWith("WIFI-SSID"))
 		{
-			Serial.println("PASSING DATA THROUGH");
-			Serial.println(passthrough);
-			client.print(passthrough);
+			Serial.println("dsfsdgsgdsgsdg SSID GRAB");
+			Serial.println(line + (line.indexOf("=") + 1));
+			strcpy(WIFIssid, line + (line.indexOf("=") + 1));
 		}
-		else
-			client.print(line);
-		yield();
-		client.flush();
-	}
-
-	delay(10);
-	client.stop();
-	Serial.println("Client disconnected / Page Sent");
-}
-
-void serve404()
-{
-	Serial.println("404 Error");
-	client.println("HTTP/1.1 404 Not Found");
-	client.stop();
-}
-
-void serve200()
-{
-	Serial.println("200 Repsonse");
-	client.println("HTTP/1.1 200 OK");
-	client.stop();
-}
-
-// connect to wifi
-void startWIFI()
-{
-	Serial.println();
-	Serial.println();
-	Serial.print("Connecting to ");
-	Serial.println(ssid);
-
-	WiFi.persistent(false);
-	// connect to network using cons credentials
-
-	WiFi.begin(ssid, password);
-	// WiFi.persistent(false);
-
-	while (WiFi.status() != WL_CONNECTED)
-	{ // wait for connection
-		delay(500);
-		Serial.print(".");
-	}
-	Serial.println("");
-	Serial.println("WiFi connected");
-
-	// Start the server
-	server.begin();
-	Serial.println("Server started");
-
-	// Print the IP address
-	Serial.print("Use this URL to connect: ");
-	Serial.print("http://");
-	Serial.print(WiFi.localIP());
-	Serial.println("/");
-}
-
-void webserver(String request)
-{
-	if (request.indexOf(".html") > 0)
-	{
-		String page =
-			request.substring(request.indexOf("/") + 1, request.indexOf(".html"));
-		Serial.println("looking for page" + page);
-		servefilefromSPIFFS(page + ".html");
-	}
-	else if (request.indexOf(".js") > 0)
-	{
-		String script =
-			request.substring(request.indexOf("/") + 1, request.indexOf(".js"));
-		servefilefromSPIFFS(script + ".js");
-	}
-	else if (request.indexOf("/ HTTP/1.1") > 0)
-	{
-		servefilefromSPIFFS("index.html");
-	}
-	else
-	{
-		serve404();
+		else if (line.startsWith("WIFI-password"))
+		{
+			// Serial.println(line.substring(line.indexOf("=") + 1));
+			// strcpy(WIFIpassword,line.substring(line.indexOf("=") + 1));
+		}
+		else if (line.startsWith("IOSRESOURCES"))
+		{
+			// Serial.println(line.substring(line.indexOf("=") + 1));
+			// strcpy(IOSResources,line.substring(line.indexOf("=") + 1));
+		}
+		else if (line.startsWith("NODENAME"))
+		{
+			// Serial.println(line.substring(line.indexOf("=") + 1));
+			// strcpy(nodename,line.substring(line.indexOf("=") + 1));
+		}
+		else if (line.startsWith("DESCRIPTION"))
+		{
+			// Serial.println(line.substring(line.indexOf("=") + 1));
+			// strcpy(nodedesc,line.substring(line.indexOf("=") + 1));
+		}
+		// else if (line.startsWith("!!CHANNELS-START!!"))
+		// {
+		// 	processconfigchannels(f);
+		// }
 	}
 }
 
-void loop()
-{
-	// if wifi connection has been lost, try to reconnect
-
-	if (WiFi.status() != WL_CONNECTED)
-	{
-		delay(1);
-		startWIFI();
-		return;
-	}
-	yield();
-
-	// Check if a client has connected
-	client = server.available();
-	client.setNoDelay(1);
-	yield();
-	if (!client)
-	{
-		yield();
-		return; // no one connected exit loop
-	}
-
-	////////////////////////////AFTER THIS ONLY RUNS IF CLIENT CONNECTED
-	// Read the first line of the request
-	Serial.println("connection");
-	client.setTimeout(100);
-	String request = client.readStringUntil('\r');
-
-	Serial.println(request); // serial debug output
-	Serial.println("Service webpage");
-	Serial.println(request);
-	webserver(request);
-
-	delay(1);
-	client.stop();
-}
-
-// Setup/Init on Startup
-///////////
-////SETUP ARDUINO ON POWERUP
-//////////
 void setup()
 {
+	Serial.begin(115200); // Start the Serial communication to send messages to the computer
+	delay(10);
+	Serial.println('\n');
 
-	Serial.begin(250000); // Start debug serial
-	delay(10);			  // wait, because things break otherwise
+	SPIFFS.begin(); // Start the SPI Flash Files System
 
-	Serial.println("SERIAL OUTPUT ACTIVE");
-
-	Serial.println("Start reading file");
-	SPIFFS.begin();
-
-	// open file for reading
+	// open config file
 	File f = SPIFFS.open("/config.dat", "r");
 	if (!f)
 	{
 		Serial.println("file open failed");
-		Serial.println("using default config");
-		// initChannel(1, 1, 5, 0, 0, 1, "CH1");
 	}
 	else
 	{
 		Serial.println("====== Reading from SPIFFS file =======");
-		// processconfigfile(f);
+		//process config file
+		processconfigfile(f);
 	}
 
-	Serial.println("initChannelIO");
-	// initChannelIO();
+	wifiMulti.addAP(*WIFIssid, *WIFIpassword); // add Wi-Fi networks you want to connect to
+	wifiMulti.addAP("walrus", "woodchuck");	// add Wi-Fi networks you want to connect to
 
-	startWIFI(); // Connect to WIFI network and start server
+	Serial.println("Connecting ...");
+	int i = 0;
+	while (wifiMulti.run() != WL_CONNECTED)
+	{ // Wait for the Wi-Fi to connect
+		delay(250);
+		Serial.print('.');
+	}
+	Serial.println('\n');
+	Serial.print("Connected to ");
+	Serial.println(WiFi.SSID()); // Tell us what network we're connected to
+	Serial.print("IP address:\t");
+	Serial.println(WiFi.localIP()); // Send the IP address of the ESP8266 to the computer
 
-	//  analogWriteFreq(2700); //Set PWM clock, some ESPs seem fuckered about this
-	analogWriteFreq(3000);
+	if (MDNS.begin("esp8266"))
+	{ // Start the mDNS responder for esp8266.local
+		Serial.println("mDNS responder started");
+	}
+	else
+	{
+		Serial.println("Error setting up MDNS responder!");
+	}
 
-	// MCLKmsec = 0;
-	// MCLKsec = 0;
-	// MCLKminutes = 0;
-	// MCLKhours = 0;
-	//
-	// TMRmsec = 0;
-	// TMRsec = 0;
-	// TMRminutes = 0;
-	// TMRhours = 0;
+	server.onNotFound([]() {								  // If the client requests any URI
+		if (!handleFileRead(server.uri()))					  // send it if it exists
+			server.send(404, "text/plain", "404: Not Found"); // otherwise, respond with a 404 (Not Found) error
+	});
 
-	Serial.println("ESP LOAD COMPLETE");
+	server.begin(); // Actually start the server
+	Serial.println("HTTP server started");
+}
+
+void loop(void)
+{
+	server.handleClient();
+}
+
+String getContentType(String filename)
+{ // convert the file extension to the MIME type
+	if (filename.endsWith(".html"))
+		return "text/html";
+	else if (filename.endsWith(".css"))
+		return "text/css";
+	else if (filename.endsWith(".js"))
+		return "application/javascript";
+	else if (filename.endsWith(".ico"))
+		return "image/x-icon";
+	return "text/plain";
+}
+
+bool handleFileRead(String path)
+{ // send the right file to the client (if it exists)
+	Serial.println("handleFileRead: " + path);
+	if (path.endsWith("/"))
+		path += "index.html";				   // If a folder is requested, send the index file
+	String contentType = getContentType(path); // Get the MIME type
+	if (SPIFFS.exists(path))
+	{														// If the file exists
+		File file = SPIFFS.open(path, "r");					// Open it
+		size_t sent = server.streamFile(file, contentType); // And send it to the client
+		file.close();										// Then close the file again
+		return true;
+	}
+	Serial.println("\tFile Not Found");
+	return false; // If the file doesn't exist, return false
 }
