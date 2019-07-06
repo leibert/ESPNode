@@ -12,8 +12,8 @@ char nodename[] = "DevMEMTEST";
 char nodedesc[] = "Development Memory Test";
 
 // WIFI Credentials. Set default as values in passwords.h
-char WIFIssid[] = "";
-char WIFIpassword[] = "";
+const char *WIFIssid;
+const char *WIFIpassword;
 
 //remote location of IOS Files
 char IOSResources[] = "ioshit.net";
@@ -28,42 +28,85 @@ bool handleFileRead(String path);		// send the right file to the client (if it e
 //read config file
 void processconfigfile(File f)
 {
+	char line[128];
+	char *key, *value;
+	int charcount;
+
 	// read file line by line
 	while (f.available())
 	{
-		String line = f.readStringUntil('\n');
-		Serial.println(line);
+		//strcpy(line, "");
+		// Serial.println("***************");
+		// Serial.println(line);
+		charcount = f.readBytesUntil('\n', line, 128);
+		// Serial.println(line);
+		// Serial.println(charcount);
+		line[charcount + 1] = '\0';
+		// Serial.println(line);
 
-		if (line.startsWith("WIFI-SSID"))
+		//Serial.println(strncmp("WIFI-SSID", line, strlen("WIFI-SSID")));
+		if (strncmp("WIFI-SSID", line, strlen("WIFI-SSID")) == 0)
 		{
-			Serial.println("dsfsdgsgdsgsdg SSID GRAB");
-			Serial.println(line + (line.indexOf("=") + 1));
-			strcpy(WIFIssid, line + (line.indexOf("=") + 1));
+			Serial.println("SSID GRAB");
+			Serial.println(line);
+			key = strtok(line, "=");
+			value = strtok(NULL, "\n");
+
+			Serial.println("KV SSID");
+			Serial.println(key);
+			Serial.println(value);
+			memcpy(WIFIssid, value, sizeof(value));
 		}
-		else if (line.startsWith("WIFI-password"))
+		else if (strncmp("WIFI-PW", line, strlen("WIFI-PW")) == 0)
 		{
-			// Serial.println(line.substring(line.indexOf("=") + 1));
-			// strcpy(WIFIpassword,line.substring(line.indexOf("=") + 1));
+			Serial.println("password GRAB");
+			Serial.println(line);
+			key = strtok(line, "=");
+			value = strtok(NULL, "\n");
+
+			Serial.println("KV password");
+			Serial.println(key);
+			Serial.println(value);
+			memcpy(WIFIpassword, value, sizeof(value));
 		}
-		else if (line.startsWith("IOSRESOURCES"))
-		{
-			// Serial.println(line.substring(line.indexOf("=") + 1));
-			// strcpy(IOSResources,line.substring(line.indexOf("=") + 1));
-		}
-		else if (line.startsWith("NODENAME"))
-		{
-			// Serial.println(line.substring(line.indexOf("=") + 1));
-			// strcpy(nodename,line.substring(line.indexOf("=") + 1));
-		}
-		else if (line.startsWith("DESCRIPTION"))
-		{
-			// Serial.println(line.substring(line.indexOf("=") + 1));
-			// strcpy(nodedesc,line.substring(line.indexOf("=") + 1));
-		}
-		// else if (line.startsWith("!!CHANNELS-START!!"))
+
+		// char *key = strtok(line, '=')
+
+		// 				 Serial.println(line + (line.indexOf("=") + 1));
+
+		// strcpy(WIFIssid, line + (line.indexOf("=") + 1));
+
+		// else if (line.startsWith("WIFI-password"))
 		// {
-		// 	processconfigchannels(f);
+		// 	Serial.println("wifipassword");
+		// 	// Serial.println(line.substring(line.indexOf("=") + 1));
+		// 	// strcpy(WIFIpassword,line.substring(line.indexOf("=") + 1));
 		// }
+		// else if (line.startsWith("IOSRESOURCES"))
+		// {
+		// 	Serial.println("iosresources");
+
+		// 	// Serial.println(line.substring(line.indexOf("=") + 1));
+		// 	// strcpy(IOSResources,line.substring(line.indexOf("=") + 1));
+		// }
+		// else if (line.startsWith("NODENAME"))
+		// {
+		// 	Serial.println("nodename");
+
+		// 	// Serial.println(line.substring(line.indexOf("=") + 1));
+		// 	// strcpy(nodename,line.substring(line.indexOf("=") + 1));
+		// }
+		// else if (line.startsWith("DESCRIPTION"))
+		// {
+		// 	Serial.println("nodedesc");
+
+		// 	// Serial.println(line.substring(line.indexOf("=") + 1));
+		// 	// strcpy(nodedesc,line.substring(line.indexOf("=") + 1));
+		// }
+		// // else if (line.startsWith("!!CHANNELS-START!!"))
+		// // {
+		// // 	processconfigchannels(f);
+		// // }
 	}
 }
 
@@ -87,9 +130,14 @@ void setup()
 		//process config file
 		processconfigfile(f);
 	}
+	Serial.println("trying to setup wifi");
+	Serial.println("SSID:");
+	Serial.println(WIFIssid);
+	Serial.println("PW:");
+	Serial.println(WIFIpassword);
 
-	wifiMulti.addAP(*WIFIssid, *WIFIpassword); // add Wi-Fi networks you want to connect to
-	wifiMulti.addAP("walrus", "woodchuck");	// add Wi-Fi networks you want to connect to
+	wifiMulti.addAP(WIFIssid, WIFIpassword); // add Wi-Fi networks you want to connect to
+	// wifiMulti.addAP("walrus", "woodchuck");  // add Wi-Fi networks you want to connect to
 
 	Serial.println("Connecting ...");
 	int i = 0;
