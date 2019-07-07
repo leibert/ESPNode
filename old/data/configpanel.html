@@ -4,35 +4,52 @@
   crossorigin="anonymous">
 </script>
 
+<div class="passthrough_info" id="init_config" style="display:none">
+~!@#$PASSTHROUGH~!@#$
+</div>
 
 <html>
-<head><title>Edit Presets</title></head>
+<head><title>Edit Configuration</title></head>
 <body>
+  Test Config Page
   <form id="configform">
-    <input type="hidden" id="mode" value="updatepreset">
+    <input type="hidden" id="mode" value="updatecfg">
     <input type="hidden" id="configsecret" value="defaulterd">
-    <input type="hidden" id="numpresets" value="1" />
-    <h2>PRESETS:</h2>
-    <div id='presets'>
+    Node Name:
+    <input type="text" id="nodename"><br>
+
+    WIFI SSID:
+    <input type="text" id="WIFI-SSID"><br>
+
+    WIFI PW:
+    <input type="text" id="WIFI-PW"><br>
+
+    NODE DESCRIPTION:
+    <input type="text" id="nodedesc"><br>
+
+    IOS RESOURCES:
+    <input type="text" id="iosresources"><br>
+
+    Number of Channels:
+    <input type="number" id="numCH" min="1" max="128" />
+
+    <hr />
+
+    <h2>Channel Definitions:</h2>
+    <div id='chdefinitions'>
 
     </div>
-    <br>
+
+
+    !!GO HERE!!
+
 
     <input type="submit">
   </form>
-
-<button onclick="addPreset()">Add a preset</button>
-
 </body>
-
 </html>
-
-
-<!-- <script type="text/javascript" src="presetpanel.js"> -->
-
 <script type="text/javascript">
 
-var config='NO DATA RECIEVED';
  console.log('number of presets changed'),
      changepresetvisbility()
  }),
@@ -118,4 +135,9 @@ var config='NO DATA RECIEVED';
      console.log('init function'), buildpresetpanel(), getpresets()
  }
  init(), console.log('preset.js loaded');
+
+</script>
+<script type="text/javascript">
+  console.log("page loaded");
+
 </script>

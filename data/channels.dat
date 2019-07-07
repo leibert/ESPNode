@@ -1,0 +1,33 @@
+{
+	"CHANNELS": {
+		"1": {
+			"NAME": "Sample DMX",
+			"TYPE": "DMX",
+			"PROFILE": "Amazon1",
+			"ADDRESS": "15"
+		},
+		"2": {
+			"NAME": "Sample DIGITAL",
+			"TYPE": "DIGITAL",
+			"PIN": "2"
+		},
+		"3": {
+			"NAME": "Sample analog",
+			"TYPE": "ANALOG",
+			"PIN": "22"
+		},
+		"4": {
+			"NAME": "SAMPLE RGB DIM",
+			"TYPE": "RGB",
+			"PIN": "14,12,33"
+		}
+	}
+}
+///POSSIBLE MAP
+ID,DMX/ANALOG/DIGITAL,RGB/Single,CTRLCH,CTRLVAL,CURRENTVALUE
+2,DMX,RGB,18,123,123,123
+
+
+id,ctrlval,r,g,b
+
+2,224,224,224,224,

@@ -3,6 +3,7 @@
   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
   crossorigin="anonymous">
 </script>
+<script src="https://kit.fontawesome.com/a123c97772.js"></script>
 
 <div class="passthrough_info" id="init_config" style="display:none">
 ~!@#$PASSTHROUGH~!@#$
@@ -11,30 +12,42 @@
 <html>
 <head><title>Edit Configuration</title></head>
 <body>
+
+  <div id="message" style="color:red">LOADING CONFIG...</div>
   Test Config Page
-  <form id="configform">
+
+  <h4>WIFI Status: <span id="WIFIstatus"></span></h4>
+
     <input type="hidden" id="mode" value="updatecfg">
     <input type="hidden" id="configsecret" value="defaulterd">
     Node Name:
-    <input type="text" id="nodename"><br>
+    <input type="text" id="NODENAME"><br>
 
     WIFI SSID:
-    <input type="text" id="WIFI-SSID"><br>
+    <input type="text" id="WIFISSID"><br>
 
     WIFI PW:
-    <input type="text" id="WIFI-PW"><br>
+    <input type="text" id="WIFIPW"><br>
 
     NODE DESCRIPTION:
-    <input type="text" id="nodedesc"><br>
+    <input type="text" id="NODEDESC"><br>
 
     IOS RESOURCES:
-    <input type="text" id="iosresources"><br>
+    <input type="text" id="IOSRESOURCES"><br>
 
-    Number of Channels:
-    <input type="number" id="numCH" min="1" max="128" />
+    PASSWORD:
+    <input type="text" id="PASSWORD"><br>
+
+    <input type="button" value="UPDATE CONFIG" onclick="sendNewConfig()">
+    </form>
 
     <hr />
 
+
+
+
+    Number of Channels:
+    <input type="number" id="numCH" min="1" max="128" />
     <h2>Channel Definitions:</h2>
     <div id='chdefinitions'>
 
@@ -49,12 +62,92 @@
 </body>
 </html>
 <script type="text/javascript">
+    configData="";
 
-var config='NO DATA RECIEVED';$('#numpresets').on('input',function(){console.log('number of presets changed'),changepresetvisbility()}),$('form').submit(function(a){a.preventDefault();var b='PRESETUPDATE##\n';b+='CONFIGSECRET='+$('#configsecret').val()+'\n',b+='!!PRESETS-START!!\n';var c=$('#numpresets').val();$('#numpresets').val('1');for(var d=1;d<=c;d++)if(''!=$('#preset'+d+'desc').val()||''!=$('#preset'+d+'details').val()){var e='~~~~~~'+parseInt($('#numpresets').val())+'\n';e+=$('#preset'+d+'desc').val()+'\n',e+=$('#preset'+d+'details').val(),'\n'!=e.slice(-1)&&(e+='\n'),e+='######\n',$('#numpresets').val(parseInt($('#numpresets').val())+1),b+=e}b+='##PRESET-END##\n',console.log('configsecret is:'+$('#configsecret').val()),console.log(b),$.post('/updconfig',b,null,'text'),buildpresetpanel(),parsepresets(b),changepresetvisbility()}),$(document).on('change','.presetdescinput',function(){console.log('description changed to to'+$(this).val());var a='#'+$(this).parent().parent().prop('id')+'desclabel';console.log(a),''==$(this).val()?$(a).html(''):$(a).html(': '+$(this).val())});function delPreset(a){$('#preset'+a+'desc').val(''),$('#preset'+a+'desclabel').html('--TO BE DELETED'),$('#preset'+a+'details').val(''),collapsepreset(a)}function addPreset(){$('#numpresets').val(parseInt($('#numpresets').val())+1),changepresetvisbility()}function changepresetvisbility(){for(console.log('make '+$('#numpresets').val()+' presets visible'),$('.presetcfg').each(function(){$(this).css('display','none')}),i=1;i<=$('#numpresets').val();i++){var b='#preset'+i+'.presetcfg';console.log(b),$(b).css('display','block')}}function buildpresetpanel(a='128'){console.log('building a '+a+'channel panel');var b='';for(i=1;i<=a;i++)b+='<div class=\'presetcfg\' id=\'preset'+i+'\' style=\'display:none\'>          <h3><a class=\'expandlnk\' href=\'javascript:;\' onclick=\'expandpreset('+i+')\'>+</a> PRESET '+i+'<span id=\'preset'+i+'desclabel\'></span></h3>          <div class=\'presetdetails\' style=\'display: none\'>          Description: <input type=\'text\' class=\'presetdescinput\' id=\'preset'+i+'desc\' /><br />           <textarea class=\'presetdetailsinput\' id=\'preset'+i+'details\' rows=\'4\' cols=\'50\'></textarea>          <button type=\'button\' onclick=\'delPreset('+i+')\'>Delete</button>          </div>          <hr />          </div>          ';$('#presets').html(b)}function populatechannels(){console.log('in populatechannels')}function expandpreset(a){var b='#preset'+a+' .presetdetails';$(b).css('display','block');var b='#preset'+a+' .expandlnk';$(b).attr('onclick','collapsepreset('+a+')'),$(b).html('-'),$(b).attr('class','collapselnk')}function collapsepreset(a){var b='#preset'+a+' .presetdetails';$(b).css('display','none');var b='#preset'+a+' .collapselnk';$(b).attr('onclick','expandpreset('+a+')'),$(b).html('+'),$(b).attr('class','expandlnk')}function parsepresets(a){console.log('PRESET PARSE'),console.log(a),a=a.toString(),a=a.split('\n'),console.log(a[2]),preset='';for(var b=0;b<a.length;b++)if(a[b].startsWith('//'));else a[b].startsWith('~~~~~~')?(presetID=a[b].substring(6),++b,presetDESC=a[b],console.log('ID# '+presetID),console.log('DESC: '+presetDESC),$('#preset'+presetID+'desc').val(presetDESC),$('#preset'+presetID+'desclabel').html(': '+presetDESC),preset=''):a[b].startsWith('######')?(console.log('PRESET IS:'),console.log(preset),console.log('#preset'+b+'details'),$('#preset'+presetID+'details').val(preset),$('#numpresets').val(presetID)):preset+=a[b]+'\n'}function parseconfig(){console.log(presets),console.log('parsing config'),config=config.toString(),config=config.split('\n'),console.log(config[2]);for(var a=0;a<config.length;a++)'!!CHANNELS-START!!'==config[a]?(config=parsechannelblock(config.slice(a)),a=0):parseline(config[a])}function getpresets(){console.log('Getting presets'),$.get('/presetinit',dataType='text',function(a){presets=a.toString(),console.log(a.toString()),parsepresets(presets),changepresetvisbility()})}function init(){console.log('init function'),buildpresetpanel(),getpresets()}init(),console.log('preset.js loaded');
+    //configEndpoint="/CFG";
+    configEndpoint="http://192.168.1.1/CFG";
+
+    function initConfigPage(){
+        //get configuration from ESP
+        ajax=$.get(configEndpoint+"?getConfig");
+
+        //fail condition, ask for help
+        ajax.fail(function(data){
+            $('#message').html("UNABLE TO RETRIEVE CONFIGURATION");
+        });
+
+        //message recieved, assume it's correctly formatted
+        ajax.done(function(data){
+            //clear load message
+            $('#message').html("");
+
+            //parse into JSON
+            configData=JSON.parse(data).ESPconfig;
+
+            //log recieved JSON
+            console.log("recieved config data",data);
+            if(configData.WIFISTATUS){
+              if (configData.WIFISTATUS=="0"){
+                $('#WIFIstatus').html("Not Connected");
+              }
+              else if (configData.WIFISTATUS=="1"){
+                $('#WIFIstatus').html("Connected to "+configData.WIFISSID);
+              }
+
+              //fill out all the form fields
+              $('#WIFISSID').val(configData.WIFISSID);
+              $('#WIFIPW').val(configData.WIFIPW);
+              $('#NODENAME').val(configData.NODENAME);
+              $('#NODEDESC').val(configData.NODEDESC);
+              $('#IOSRESOURCES').val(configData.IOSRESOURCES);
 
 
-</script>
-<script type="text/javascript">
-  console.log("page loaded");
+
+            }
+            //there is something wrong with this JSON
+            else{
+              $('#message').html("CONFIGURATION MALFORMED. SET NEW CONFIGURATION");
+            }
+
+            //check WIFI status
+
+            
+            
+        });
+
+    }
+    function sendNewConfig(){
+       configDict={};
+       configDict['ESPconfig']={}
+       configDict['ESPconfig']['WIFISSID']=$('#WIFISSID').val();
+       configDict['ESPconfig']['WIFIPW']=$('#WIFIPW').val();
+       configDict['ESPconfig']['NODENAME']=$('#NODENAME').val();
+       configDict['ESPconfig']['NODEDESC']=$('#NODEDESC').val();
+
+      ajax = $.ajax(
+      {
+        url: configEndpoint,
+        type: "POST",
+        data: JSON.stringify(configDict)
+      });
+
+      ajax.done(function(data){
+        console.log("dict sent",configDict);
+        $('#message').html("NEED TO RELOAD");
+      });
+
+      ajax.fail(function(data){
+        console.log("dict send fail",configDict);
+        $('#message').html("SEND FAILED");
+      });
+
+    }
+
+
+
+
+    console.log("loading page");
+    initConfigPage();
+    console.log("LOAD END");
 
 </script>

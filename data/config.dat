@@ -1,17 +1,11 @@
-WIFI-SSID=walrus aa 
-WIFI-PW=woodchuck
-//WIFI-SSID=66ADAMS
-//WIFI-PW=3ng1n33rs_mans1on
-//WIFI-SSID=FiOS-53RJG
-//WIFI-PW=vet6206diet47slap
-IOSRESOURCES=ioshit.net
-NODENAME=DEVBRD
-DESCRIPTION=Development Board
-CONFIGSECRET=defaulterd
-!!CHANNELS-START!!
-1, 3, 14, 12, 13, 0 #Right RGB Flood
-2, 3, 4, 5, 16, 0 #Left RGB Flood
-3, 20, 301, 1, 0, 0 #DMXA
-3, 20, 301, 16, 0, 0 #DMXB
-3, 20, 301, 32, 0, 0 #DMXC
-##CHANNELS-END##
+{
+	"ESPconfig": {
+		"WIFISSID": "fdgdfgddddddd",
+		"WIFIPW": "dfgdfgddddddd",
+		"WIFISTATUS": "0",
+		"NODENAME": "ESPNodedddd",
+		"NODEDESC": "Unconfigured ESPNodedddd",
+		"IOSRESOURCES": "ioshit.net",
+		"NUMCH": "TEST"
+	}
+}
