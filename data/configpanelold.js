@@ -227,6 +227,11 @@ function buildCHpanel(maxCH = 128) {
 }
 
 
+
+
+
+
+
 function populatechannels() {
   console.log("in populatechannels");
 }

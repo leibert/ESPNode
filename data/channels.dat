@@ -1,25 +1,29 @@
 {
 	"CHANNELS": {
 		"1": {
+			"ID":"1",
 			"NAME": "Sample DMX",
 			"TYPE": "DMX",
 			"PROFILE": "Amazon1",
 			"ADDRESS": "15"
 		},
 		"2": {
+			"ID":"2",
 			"NAME": "Sample DIGITAL",
 			"TYPE": "DIGITAL",
 			"PIN": "2"
 		},
 		"3": {
+			"ID":"3",
 			"NAME": "Sample analog",
 			"TYPE": "ANALOG",
 			"PIN": "22"
 		},
 		"4": {
+			"ID":"4",
 			"NAME": "SAMPLE RGB DIM",
 			"TYPE": "RGB",
-			"PIN": "14,12,33"
+			"PIN": "14/12/33"
 		}
 	}
 }

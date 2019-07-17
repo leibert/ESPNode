@@ -7,5 +7,6 @@
 		"NODEDESC": "Unconfigured ESPNodedddd",
 		"IOSRESOURCES": "ioshit.net",
 		"NUMCH": "TEST"
+		"AVAILABLEMODES":{"DIGITAL","DMX","ANALOG"}
 	}
 }
