@@ -9,15 +9,17 @@
 
 String buffer = "";
 
+char bufferB[1024];
+
 //GLOBAL CONFIG VARIABLES (filled out by SPIFF read of config.dat)
-char nodename[64] = "ESPNode";
+char nodename[64] = "DEFESPNode";
 // Node Description
-char nodedesc[64] = "Unconfigured ESPNode";
+char nodedesc[64] = "DEFUnconfigured ESPNode";
 // WIFI Credentials. Set default as values in passwords.h
 char WIFIssid[64];
 char WIFIpassword[64];
 //remote location of IOS Files
-char IOSResources[] = "ioshit.net";
+char IOSResources[] = "DEFioshit.net";
 
 //variables for WIFI
 bool validWIFI = false;
@@ -66,7 +68,7 @@ struct channel
 };
 
 //array of channels, not zero indexed
-struct channel channels[256];
+struct channel channels[257];
 
 ///////////////////////////
 /////CONFIG FUNCTIONS//////
@@ -82,6 +84,7 @@ void loadConfigJSONSettings(File f)
 	// read file line by line
 	while (f.available())
 	{
+		// memset(&line[0], 0, sizeof(line));
 		charcount = f.readBytesUntil(',', line, 128);
 		line[charcount] = '\0';
 		Serial.println("!!!!!!!!!!!!!!!!!");
@@ -104,6 +107,7 @@ void loadConfigJSONSettings(File f)
 			Serial.println(line);
 			key = strtok(NULL, "\"");
 			Serial.println("KEY:");
+
 			if (!key)
 			{
 				Serial.println("loop break");
@@ -345,20 +349,22 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 	//Extract key
 }
 
-String sendChannelConfigJSON()
+void sendChannelConfigJSON()
 {
 	bool firstChildElement = true;
-	buffer = "";
-	buffer += "{";
-	buffer += "\"channels\":{\n";
+	strcpy(bufferB, "{\"channels\":{\n");
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-	server.send(200, "text/html", buffer);
+	server.send(200, "text/html", bufferB);
+	// Serial.println(i);
 
-	for (int i = 1; i < 256; i++)
+	char charString[50];
+
+	for (int i = 1; i < 255; i++)
 	{
-		Serial.print("working on channel");
-		Serial.println(i);
-		buffer = "";
+		// Serial.print("working on channel");
+		// Serial.println(i);
+		strcpy(bufferB, "");
+
 		if (channels[i].type == 0 || channels[i].type == NULL)
 		{
 			Serial.println("skipb");
@@ -368,59 +374,33 @@ String sendChannelConfigJSON()
 		//if this isn't the first element, add a comma to properly format JSON
 		if (!firstChildElement)
 		{
-			buffer += ",\n";
+			strcat(bufferB, ",\n");
 		}
 		firstChildElement = false;
 
 		//Create JSON object with the channel index as ID
-		buffer += "\"" + String(i) + "\":{";
-		buffer += "\"NAME\":\"" + String(channels[i].name) + "\",";
-		buffer += "\"TYPE\":\"" + String(channels[i].type) + "\",";
-		buffer += "\"CHMAPPING\":\"" + String(channels[i].chmapping) + "\",";
-		buffer += "\"ADDRESSING\":\"";
-		buffer += String(channels[i].CTRLAddress) + ";";
-		buffer += String(channels[i].address1) + ";";
-		buffer += String(channels[i].address2) + ";";
-		buffer += String(channels[i].address3);
-		buffer += "\"";
-		buffer += "}";
+		// strcat(bufferB, "\"%d"");
 
-		// //check if this channel uses a control channel
-		// if (channels[i].chmapping[0] == 1)
-		// {
-		// 	//if a control channel, the first address will be the control ch
-		// }
-		// if (channels[i].address1)
-		// {
-		// 	buffer += String(channels[i].address1);
-		// }
-		// else
-		// {
-		// 	//put this so there can't be an empty address
-		// 	buffer += "UNADDR";
-		// }
-		// if (channels[i].address2)
-		// {
-		// 	buffer += ";" + String(channels[i].address2);
-		// }
-		// if (channels[i].address1)
-		// {address1
-		// 	buffer += ";" + String(channels[i].BAddress);
-		// }
-		//close the addressing field
-		server.sendContent(buffer);
+		snprintf(charString, 50, "\"%d\":{", i);
+		strcat(bufferB, charString);
+
+		snprintf(charString, 50, "\"NAME\":\"%s\",", channels[i].name);
+		strcat(bufferB, charString);
+		snprintf(charString, 50, "\"TYPE\":\"%s\",", channels[i].type);
+		strcat(bufferB, charString);
+		snprintf(charString, 50, "\"CHMAPPING\":\"%s\",", channels[i].chmapping);
+		strcat(bufferB, charString);
+
+		snprintf(charString, 50, "\"ADDRESSING\":\"%i;%i;%i;%i\"}", channels[i].CTRLAddress, channels[i].address1, channels[i].address2, channels[i].address3);
+		strcat(bufferB, charString);
+
+		server.sendContent(bufferB);
 	}
 	Serial.println("looping done");
 	server.sendContent("}\n}");
 
 	server.sendContent("");
 	Serial.println("need to close server");
-
-	server.sendHeader("Content-Length", "0");
-	server.send(200, "text/plain", "");
-
-	server.client().flush();
-	server.client().stop(); //This doesn't close connection :(
 }
 
 void saveChannelSetupJSON(String buffer)
@@ -549,15 +529,16 @@ void handleWEBConfig()
 		{
 			Serial.println("sending CH setup JSON");
 			sendChannelConfigJSON();
+			Serial.println("asdgwdgaw");
 		}
-		Serial.println();
+		Serial.println("wferwer");
 	}
 	else
 	{
 		Serial.println("OTHER METHOD");
 	}
-
-	// Serial.println(server.arg);
+	delay(25);
+	Serial.println("end of web config");
 }
 
 ///////////////////////////
@@ -602,7 +583,7 @@ void setup()
 		delay(250);
 		Serial.print('.');
 		i++;
-		if (i > 10)
+		if (i > 60)
 		{
 			Serial.println("WIFI FAIL");
 			validWIFI = false;
@@ -629,28 +610,31 @@ void setup()
 		setupWebServer(true);
 	}
 
-	//for debugging
-	Serial.println("loading channels");
-	// Serial.println("JSON END");
+	// //for debugging
+	// Serial.println("loading channels");
+	// // Serial.println("JSON END");
 
-	f = SPIFFS.open("/channelSetup.dat", "r");
-	if (!f)
-	{
-		Serial.println("file open failed");
-	}
-	else
-	{
-		Serial.println("====== Reading from SPIFFS file =======");
-		//process config file
-		loadChannelSetupJSONSettings(f);
-	}
+	// f = SPIFFS.open("/channelSetup.dat", "r");
+	// if (!f)
+	// {
+	// 	Serial.println("file open failed");
+	// }
+	// else
+	// {
+	// 	Serial.println("====== Reading from SPIFFS file =======");
+	// 	//process config file
+	// 	loadChannelSetupJSONSettings(f);
+	// }
 }
 
 void loop(void)
 {
 	if (!validWIFI)
 	{
+		// Serial.println("BBBBDDDDD");
 		dnsServer.processNextRequest();
 	}
+	// Serial.println("333AAA");
 	server.handleClient();
+	delay(20);
 }

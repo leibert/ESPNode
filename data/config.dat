@@ -1,10 +1,10 @@
 {
 	"ESPconfig": {
-		"WIFISSID": "fdgdfgddddddd",
-		"WIFIPW": "dfgdfgddddddd",
+		"WIFISSID": "walrus",
+		"WIFIPW": "woodchuck",
 		"WIFISTATUS": "0",
-		"NODENAME": "ESPNodedddd",
-		"NODEDESC": "Unconfigured ESPNodedddd",
+		"NODENAME": "ESPNode",
+		"NODEDESC": "Unconfigured ESPNode",
 		"IOSRESOURCES": "ioshit.net",
 		"NUMCH": "TEST"
 		"AVAILABLEMODES":{"DIGITAL","DMX","ANALOG"}
