@@ -6,6 +6,13 @@
 <script src="https://kit.fontawesome.com/a123c97772.js"></script>
 <script src="configpanel.js"></script>
 <script src="channelpanel.js"></script>
+<script src="editablefields.js"></script>
+<script src="common.js"></script>
+
+<!-- bootstrap specific //-->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 
 <div class="passthrough_info" id="init_config" style="display:none">
 ~!@#$PASSTHROUGH~!@#$
@@ -15,42 +22,104 @@
 <head><title>Edit Configuration</title></head>
 <body>
 
-  <div id="message" style="color:red">LOADING CONFIG...</div>
-  Test Config Page
+  <input type="hidden" id="mode" value="updatecfg">
+  <input type="hidden" id="configsecret" value="defaulterd">
 
-  <h4>WIFI Status: <span id="WIFIstatus"></span></h4>
 
-    <input type="hidden" id="mode" value="updatecfg">
-    <input type="hidden" id="configsecret" value="defaulterd">
-    Node Name:
-    <input type="text" id="NODENAME"><br>
+  <div id="message" class="alert alert-warning" role="alert">
+  Loading Configuration
+  </div>
 
-    WIFI SSID:
-    <input type="text" id="WIFISSID"><br>
 
-    WIFI PW:
-    <input type="text" id="WIFIPW"><br>
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+  <li class="nav-item">
+    <a class="nav-link active" id="nodecfg-tab" data-toggle="tab" href="#nodecfg" role="tab" aria-controls="nodecfg" aria-selected="true">Node Overview</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" id="ch-tab" data-toggle="tab" href="#channels" role="tab" aria-controls="profile" aria-selected="false">Channels</a>
+  </li>
+</ul>
 
-    NODE DESCRIPTION:
-    <input type="text" id="NODEDESC"><br>
 
-    IOS RESOURCES:
-    <input type="text" id="IOSRESOURCES"><br>
-
-    PASSWORD:
-    <input type="text" id="PASSWORD"><br>
-
-    <input type="button" value="UPDATE CONFIG" onclick="sendNewConfig()">
-    </form>
-
-    <hr />
+<div class="container-fluid">
 
 
 
 
-    Number of Channels:
-    <input type="number" id="numCH" min="1" max="128" />
+  <div class="tab-content" id="myTabContent">
+    <div class="tab-pane fade show active" id="nodecfg" role="tabpanel" aria-labelledby="nodecfg-tab">
+    
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">WiFi Status</label>
+        <div class="col-sm-10">
+          <input type="text" readonly class="form-control-plaintext" id="staticEmail" value="FILL STATUS">
+        </div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Node Name</label>
+        <div class="col-sm-10">
+          <input type="text" id="NODENAME"><br>
+        </div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Node Description</label>
+        <div class="col-sm-10">
+          <input type="text" id="NODEDESC"><br>
+        </div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Node Config Password</label>
+        <div class="col-sm-10">
+          <input type="text" id="PASSWORD"><br>
+        </div>
+      </div>
+
+      <div class="form-group row">
+        <span style="height:30px"></span>
+      </div>
+
+
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">WiFi SSID</label>
+        <div class="col-sm-10">
+          <input type="text" id="WIFISSID"><br>
+        </div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">WiFi Password</label>
+        <div class="col-sm-10">
+          <input type="text" id="WIFIPW"><br>
+        </div>
+      </div>
+
+      <div class="form-group row">
+        <span style="height:30px"></span>
+      </div>
+
+
+      <div class="form-group row">
+        <label class="col-sm-2 col-form-label">IOS Master</label>
+        <div class="col-sm-10">
+          <input type="text" id="IOSRESOURCES"><br>
+        </div>
+      </div>
+
+      <input type="button" value="UPDATE CONFIG" onclick="sendNewConfig()">
+
+    </div>
+
+
+
+
+
+
+    <div class="tab-pane fade" id="channels" role="tabpanel" aria-labelledby="ch-tab">
+
     <h2>Channel Definitions:</h2>
+    
+    
+    <input type="button" value="Add Channel" onclick="addNewChannel()">
+
     <div id='chdefinitions'>
 
     </div>
@@ -59,19 +128,36 @@
     </div>
 
 
-    !!GO HERE!!
 
 
-    <input type="submit">
+
+   
+
+    
+    </div>
+  </div>
+
+  
+
+
+</div>
+  
+
+    
+
+
+
+
+    
   </form>
 </body>
 </html>
 <script type="text/javascript">
-  configData=null;
-  channelConfigData=null;
+  configData={};
+  channelConfigData={};
 
-  configEndpoint="/CFG";
-  //configEndpoint="http://192.168.88.170/CFG";
+  //configEndpoint="/CFG";
+  configEndpoint="http://192.168.88.167/CFG";
   initConfigPage();
   loadChannelsPanel(config=true);
 
@@ -80,6 +166,8 @@
 
   console.log("loading page");
   //initConfigPage();
+
+  prepareCollapsableSectionHeaders();
 
   console.log("LOAD END");
   //loadChannelsPanel(true);

@@ -1,40 +1,13 @@
+var numberOfChannels = 0;
 
-var testjson = `{
-    "CHANNELS": {
-        "1": {
-            "ID": "1",
-                "NAME": "Sample DMX",
-                    "TYPE": "DMX",
-                        "PROFILE": "Amazon1",
-                            "ADDRESS": "15"
-        },
-        "2": {
-            "ID": "2",
-                "NAME": "Sample DIGITAL",
-                    "TYPE": "DIGITAL",
-                        "PIN": "2"
-        },
-        "3": {
-            "ID": "3",
-                "NAME": "Sample analog",
-                    "TYPE": "ANALOG",
-                        "PIN": "22"
-        },
-        "4": {
-            "ID": "4",
-                "NAME": "SAMPLE RGB DIM",
-                    "TYPE": "RGB",
-                        "PIN": "14,12,33"
-        }
-    }
-}`;
-
-
-
-
-
-
-
+var channelTypes = {
+    "ANALOG": "Analog Dimmer",
+    "SWITCH": "On/Off Switch",
+    "RGB": "3 Channel RGB",
+    "DMXSWITCH": "DMX On/Off Switch",
+    "DMXANALOG": "DMX DIMMER",
+    "DMXRGB": "DMX 3-Channel RGB"
+};
 
 function loadChannelsPanel(configMode = false) {
 
@@ -43,7 +16,10 @@ function loadChannelsPanel(configMode = false) {
 
     //fail condition, ask for help
     ajax.fail(function (data) {
-        channelConfigData = null;
+        //THIS CREATES A RACE CONDITON
+        //!!!!!!!!!!!!!!!FIX!!!!!!!!!!!!!!!!!!!!!!!! 
+        //if(chann)
+        // channelConfigData = {};
         $('#message').html("UNABLE TO RETRIEVE CONFIGURATION");
     });
 
@@ -51,65 +27,225 @@ function loadChannelsPanel(configMode = false) {
     ajax.done(function (data) {
         channelConfigData = JSON.parse(data);
 
-        jQuery.each(channelConfigData, function (i, channel) {
-            console.log("working on", channel);
-            addChannelPanel(channel, configMode);
+        jQuery.each(channelConfigData.channels, function (i, channel) {
+            // console.log("working on", channel);
+            addChannelPanel(channelID = i, channel, configMode);
         });
     });
 }
 
 
+function addNewChannel() {
+    channel = {};
+    channel["ADDRESSING"] = "0,0,0,0";
+    channel["CHMAPPING"] = "0";
+    channel["NAME"] = "New Channel";
+    channel["TYPE"] = "ANALOG";
+
+    channelID = numberOfChannels + 1;
+
+    channelConfigData[channelID] = channel;
+    addChannelPanel(channelID, channel, configMode = 1);
+
+    numberOfChannels += 1;
 
 
 
-
-function addChannelPanel(channel, configMode = false, showValue = false) {
-    var channelDOM = $('<div></div>').addClass('channelObject');
-    channelDOM.attr('channelID', channel.ID);
-    var header = $('<h3></h3>').addClass('channelName');
-    header.html(channel.NAME);
-
-    var channelType = $('<span>').addClass('channelType');
-    switch (channel.TYPE) {
-        case 'DMX':
-            channelType.html('DMX')
-            break;
-        case 'Digital':
-            channelType.html('DIGITAL')
-            break;
-        case 'Analog':
-            channelType.html('ANALOG')
-            break;
-    }
-
-
-
-    //build the dom element
-    channelDOM.append(header);
-    channelDOM.append(channelType);
-
-
-
-    if (configMode) {
-        channelDOM.addClass('editableChannel');
-        header.addClass('editableField')
-    }
-
-    $('#channelPanel').append(channelDOM);
-    // $('#channelPanel').append("asasd");
 }
 
 
 
 
 
+function addChannelPanel(channelID, channel, configMode = false, showValue = false) {
+
+    //build a header that will also serve as the collapser for the channel details
+    var channelHeader = $('<div></div>').addClass('collapsingSectionHeader');
+    channelHeader.attr('headerFor', "#channel" + channelID);
+
+
+
+    //create the dom for the channel details
+    var channelDOM = $('<div></div>').addClass('channelObject');
+    channelDOM.attr('ID', "channel" + channelID);
+    channelDOM.attr('channelID', channelID);
+
+    var channelDescription = $('<h3></h3>').addClass('channelName');
+    channelDescription.append(channel.NAME);
+
+
+    //build the header
+    channelHeader.append('<i class="fas fa-chevron-circle-down collapserIcon"></i> ');
+    channelHeader.append('#' + channelID + ': ');
+    channelHeader.append(channelDescription);
+    //get everything on the same line
+    channelDescription.css('display', 'inline');
 
 
 
 
 
 
-$('#numCH').on('input', function () {
-    console.log("number of channels changed");
-    changeCHvisbility();
+
+
+
+
+    console.log("channel parse", channelID, channel.TYPE, channel);
+    if (channel.TYPE == '' || channel.TYPE === undefined || channel.TYPE == null) {
+        console.log("EMPTY CHANNEL");
+        return
+    }
+
+
+    if (configMode) {
+        var switchElement = $('<span>').addClass("custom-control custom-switch");
+        switchElement.append('<input type="checkbox" class="custom-control-input channelEditSwitch" id="channelEditSwitch' + channelID + '">');
+        switchElement.append('<label class="custom-control-label" for="channelEditSwitch' + channelID + '">Edit this channel</label>');
+        channelDOM.append(switchElement);
+        channelDOM.append('<br>');
+    }
+
+    if (configMode) {
+        // var typeSelector = $('<select></select>');
+        // typeSelector.addClass('channelTypeSelector');
+        // typeSelector.attr('channelID', channelID);
+        // $.each(channelTypes, function (key, value) {
+        //     typeSelector.attr('channelID', channelID).append($('<option/>', {
+        //         value: key,
+        //         text: value
+        //     }));
+        // });
+        // channelTypePanel.append(typeSelector);
+
+    }
+    else {
+
+    }
+
+
+    channelDOM.append(channelControllerDOM(channelID));
+
+    //build the dom element
+
+
+
+
+
+    $('#channelPanel').append('<hr />');
+    $('#channelPanel').append(channelHeader);
+    $('#channelPanel').append(channelDOM);
+    // $('#channelPanel').append("asasd");
+
+
+    if (configMode) {
+        channelDOM.addClass('editableChannel');
+        channelDescription.addClass('editableItem');
+        channelDescription.attr('AJAX_fieldName', 'channelName');
+        channelDescription.attr('AJAX_targetObject', 'channel');
+        channelDescription.attr('AJAX_targetObjectID', channelID);
+
+
+    }
+
+    editableItemPageSetup();
+}
+
+
+
+function channelControllerDOM(channelID) {
+
+    var channel = channelConfigData[channelID];
+
+    var channelType = channel.TYPE;
+
+    var channelTypePanel = $('<span>').addClass('channelTypePanel');
+    if (channel.TYPE == 'NEW') {
+        console.log("NEW CHANNEL");
+        channelTypePanel.html('Undefined');
+    }
+    else {
+        $.each(channelTypes, function (key, value) {
+            if (key == channel.TYPE) {
+                channelTypePanel.html(value);
+
+
+            }
+        });
+    }
+
+
+
+
+
+
+    var faderElement = $('<span>').html('fader goes here');
+    var rgbSelectorElement = $('<span>').html('RGB goes here');
+
+
+
+    var controllerDOM = $('<div>');
+    controllerDOM.addClass('channelController');
+    controllerDOM.append(channelTypePanel);
+    controllerDOM.append('<br>');
+
+
+
+    switch (channelType) {
+        case "ANALOG":
+            controllerDOM.append(faderElement.attr('channelAddress', '1'));
+            break;
+
+        case "SWITCH":
+            controllerDOM.append(switchElement.attr('channelAddress', '1'));
+            break;
+
+        case "RGB":
+            controllerDOM.append(rgbSelectorElement.attr('channelAddress', '1'));
+            break;
+
+        case "DMXSWITCH":
+            controllerDOM.append(switchElement.attr('channelAddress', '1'));
+            break;
+
+        case "DMXANALOG":
+            controllerDOM.append(faderElement.attr('channelAddress', '1'));
+            break;
+
+        case "DMXRGB":
+            controllerDOM.append(rgbSelectorElement.attr('channelAddress', '1'));
+            break;
+
+    }
+
+    return controllerDOM
+}
+
+
+$(document).on('change', '.channelTypeSelector', function () {
+    var channelID = $(this).attr('channelID');
+    console.log('type changed for channel', channelID, $(this));
+    $('.channelObject[channelID=' + channelID + '] .channelController').html(channelControllerDOM($(this).children("option:selected").val()));
 });
+
+$(document).on('change', '.channelEditSwitch', function () {
+    var channelID = $(this).parent().parent().attr('channelID');
+    console.log('edit channel', channelID, $(this).value, $(this));
+    debugger
+    if ($(this)[0].checked) {
+        $('.channelObject[channelid=' + channelID + '] .channelController').html('');
+    }
+    else {
+        $('.channelObject[channelid=' + channelID + '] .channelController').html(channelControllerDOM(channelID));
+
+    }
+
+
+    // $('.channelObject[channelID=' + channelID + '] .channelController').html(channelControllerDOM($(this).children("option:selected").val()));
+});
+
+
+
+
+
+
+
