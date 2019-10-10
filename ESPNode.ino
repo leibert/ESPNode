@@ -208,6 +208,23 @@ void saveConfigJSON(String configBuffer)
 		ESP.reset();
 	}
 }
+
+void saveChannelConfigJSON(String configBuffer)
+{
+	File f = SPIFFS.open("/channelSetup.dat", "w+");
+	if (!f)
+	{
+		Serial.println("file open failed");
+	}
+	else
+	{
+		f.print(configBuffer);
+		Serial.println("config written");
+		Serial.println("resetting node");
+		f.close();
+		ESP.reset();
+	}
+}
 ///////////////////////////
 /////CH SETUP FUNCTIONS//////
 ///////////////////////////
@@ -513,6 +530,10 @@ void handleWEBConfig()
 		{
 			saveConfigJSON(buffer);
 		}
+		else if (buffer.startsWith("{\"CHANNELS\":"))
+		{
+			saveChannelConfigJSON(buffer);
+		}
 	}
 	else if (server.method() == HTTP_GET)
 	{
@@ -611,20 +632,21 @@ void setup()
 	}
 
 	// //for debugging
-	// Serial.println("loading channels");
-	// // Serial.println("JSON END");
+	Serial.println("loading channels");
+	// Serial.println("JSON END");
 
-	// f = SPIFFS.open("/channelSetup.dat", "r");
-	// if (!f)
-	// {
-	// 	Serial.println("file open failed");
-	// }
-	// else
-	// {
-	// 	Serial.println("====== Reading from SPIFFS file =======");
-	// 	//process config file
-	// 	loadChannelSetupJSONSettings(f);
-	// }
+	f = SPIFFS.open("/channelSetup.dat", "r");
+	if (!f)
+	{
+		Serial.println("file open failed");
+	}
+	else
+	{
+		Serial.println("====== Reading from SPIFFS file =======");
+		//process config file
+		loadChannelSetupJSONSettings(f);
+	}
+	Serial.println("load completed");
 }
 
 void loop(void)

@@ -1,6 +1,7 @@
 var numberOfChannels = 0;
 
 var channelTypes = {
+    "EMPTY": "Open Channel",
     "ANALOG": "Analog Dimmer",
     "SWITCH": "On/Off Switch",
     "RGB": "3 Channel RGB",
@@ -25,10 +26,26 @@ function loadChannelsPanel(configMode = false) {
 
     //message recieved, assume it's correctly formatted
     ajax.done(function (data) {
-        channelConfigData = JSON.parse(data);
+        channelConfigData = JSON.parse(data).channels;
 
-        jQuery.each(channelConfigData.channels, function (i, channel) {
+        jQuery.each(channelConfigData, function (i, channel) {
             // console.log("working on", channel);
+
+            if (channel.TYPE == '' || channel.TYPE === undefined || channel.TYPE == null) {
+                console.log("EMPTY CHANNEL");
+                channel.TYPE = 'EMPTY'
+                channel.NAME = 'OPEN CHANNEL'
+                return
+            }
+
+            if (!(channel.TYPE in channelTypes)) {
+                channel.TYPE = "NOSUPPORT";
+                channel.NAME = 'CHANNEL TYPE NOT SUPPORTED'
+
+            }
+
+
+
             addChannelPanel(channelID = i, channel, configMode);
         });
     });
@@ -37,7 +54,6 @@ function loadChannelsPanel(configMode = false) {
 
 function addNewChannel() {
 
-    // debugger
 
     channel = {};
     channel["ADDRESSING"] = "0,0,0,0";
@@ -94,10 +110,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 
 
     console.log("channel parse", channelID, channel.TYPE, channel);
-    if (channel.TYPE == '' || channel.TYPE === undefined || channel.TYPE == null) {
-        console.log("EMPTY CHANNEL");
-        return
-    }
+
 
 
     if (configMode) {
@@ -118,6 +131,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 
     var channelController = $('<div class="channelControllerContainer">').html(channelControllerDOM(channelID))
     channelDOM.append(channelController);
+    numberOfChannels += 1;
 
     //build the dom element
 
@@ -174,9 +188,7 @@ function createSwitchElement(channelID, subchannel = 1, value = 0, label = 'Outp
 
 
 function channelControllerDOM(channelID) {
-
     var channel = channelConfigData[channelID];
-
     var channelType = channel.TYPE;
 
     var channelTypePanel = $('<span>').addClass('channelTypePanel');
@@ -233,6 +245,9 @@ function channelControllerDOM(channelID) {
         case "DMXRGB":
             controllerDOM.append(createRGBElement(channelID, 1, 0, 0, 0));
             break;
+        case "EMPTY":
+            controllerDOM.append("Select a channel type to define this channel");
+            break;
 
     }
 
@@ -252,7 +267,9 @@ function channelEditorDOM(channelID) {
 
     var channel = channelConfigData[channelID];
 
+
     var channelType = channel.TYPE;
+
 
     var channelTypePanel = $('<span>').addClass('channelTypePanel');
     var typeSelector = $('<select></select>');
@@ -375,12 +392,12 @@ function saveChannelConfig(channelID) {
 
 
 
-
-
     updatedChannel["ADDRESSING"] = addressing.toString();
     updatedChannel["CHMAPPING"] = "0";
-    updatedChannel["NAME"] = $('.channelObject[channelid=' + channelID + '] .channelName .editableItemValue').val();
+    updatedChannel["NAME"] = $('.channelName[ajax_targetobjectid=' + channelID + '] .editableItemValue').html();
     updatedChannel["TYPE"] = $('.channelObject[channelid=' + channelID + '] .channelTypeSelector').val();
+
+
 
 
     channelConfigData[channelID] = updatedChannel;
@@ -390,37 +407,80 @@ function saveChannelConfig(channelID) {
 
 
 
+
+
 function buildChannelConfigJSON() {
     var jsonString = '';
-    jsonString += '{';
-    jsonString += '"CHANNELS": {';
-    debugger
+    // jsonString += '{';
+    // jsonString += '"CHANNELS": {';
+
+    // for (i = 1; i <= Object.keys(channelConfigData).length; i++) {
+    //     jsonString += '"' + i + '": {';
+    //     Object.keys(channelConfigData[i]).forEach(function (key, index) {
+    //         jsonString += '"' + key + '":"' + channelConfigData[i][key] + '"';
+    //         if (index < Object.keys(channelConfigData[i]).length - 1) {
+    //             jsonString += ',';
+    //         }
+
+    //     });
+    //     jsonString += '}';
+    //     if (i < Object.keys(channelConfigData).length) {
+    //         jsonString += ',';
+    //     }
+
+
+    // }
+
+
+    // jsonString += '}';
+    // jsonString += '}';
+
+
+
+    jsonDict = {}
+    jsonDict['CHANNELS'] = {}
 
     for (i = 1; i <= Object.keys(channelConfigData).length; i++) {
-        jsonString += '"' + i + '": {';
-        Object.keys(channelConfigData[i]).forEach(function (key, index) {
-            jsonString += '"' + key + '":"' + channelConfigData[i][key] + '"';
-            if (index < Object.keys(channelConfigData[i]).length - 1) {
-                jsonString += ',';
-            }
 
-        });
-        jsonString += '}';
-        if (i < Object.keys(channelConfigData).length) {
-            jsonString += ',';
+        if (!channelConfigData[i] || !channelConfigData[i].TYPE || channelConfigData[i].TYPE == '' || channelConfigData[i].TYPE == 'EMPTY') {
+            continue
         }
-
+        else {
+            jsonDict['CHANNELS'][i] = channelConfigData[i]
+        }
 
     }
 
+    jsonString = JSON.stringify(jsonDict)
 
-    jsonString += '}';
-    jsonString += '}';
+
+    console.log(jsonString);
     return jsonString
 
 }
 
 
+function pushChannelConfigJSONtoNode() {
+
+    ajax = $.ajax(
+        {
+            url: configEndpoint,
+            type: "POST",
+            data: buildChannelConfigJSON()
+        });
+
+    ajax.done(function (data) {
+        console.log("chconfig sent", channelConfigData);
+        $('#message').html("NEED TO RELOAD");
+    });
+
+    ajax.fail(function (data) {
+        console.log("chconfig send fail", channelConfigData);
+        $('#message').html("SEND FAILED");
+    });
+
+
+}
 
 
 $(document).on('click', '.saveChannelConfigButton', function () {
