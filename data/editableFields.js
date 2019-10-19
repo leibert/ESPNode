@@ -105,11 +105,11 @@ function editableItemHandler(element, action) {
 
             //add check button
             $(jqSelector).append(
-                '<i class="fas fa-check editableConfirm" style="padding:5px"></i>'
+                '<i class="fas fa-check editableConfirm" style="padding:5px">SAVE</i>'
             );
             //add cancel button
             $(jqSelector).append(
-                '<i class="fas fa-times editableCancel" style="padding:5px"></i>'
+                '<i class="fas fa-times editableCancel" style="padding:5px">CANCEL</i>'
             );
             break;
 
@@ -263,7 +263,7 @@ function editableItemSetup(
     $(jqSelector).html('');
     $(jqSelector).html('<span class="editableItemValue">' + initialValue + '</span>');
     //add a pencil icon to add editable fields
-    $(jqSelector).append('<i class="fas fa-pencil-alt" style="padding:5px"></i>');
+    $(jqSelector).append('<i class="fas fa-pencil-alt" style="padding:5px">EDIT</i>');
 }
 
 function renderRecievedObject(objectData) {

@@ -68,7 +68,7 @@ struct channel
 };
 
 //array of channels, not zero indexed
-struct channel channels[257];
+struct channel channels[51];
 
 ///////////////////////////
 /////CONFIG FUNCTIONS//////
@@ -220,9 +220,10 @@ void saveChannelConfigJSON(String configBuffer)
 	{
 		f.print(configBuffer);
 		Serial.println("config written");
-		Serial.println("resetting node");
+		// Serial.println("resetting node");
 		f.close();
-		ESP.reset();
+		loadChannelSetupJSONSettings(f);
+		// ESP.reset();
 	}
 }
 ///////////////////////////
@@ -232,15 +233,19 @@ void saveChannelConfigJSON(String configBuffer)
 //read ChannelSetup file
 void loadChannelSetupJSONSettings(File f)
 {
-	char line[128];
+	char line[512];
 	char *key, *value;
 	int charcount;
 
 	// read file line by line
 	while (f.available())
 	{
-		charcount = f.readBytesUntil(',', line, 128);
+
+		charcount = f.readBytesUntil(',', line, 512);
 		line[charcount] = '\0';
+
+
+
 		Serial.println("!!!!!!!!!!!!!!!!!");
 		// Serial.println(line);
 		// Serial.println("!!!!!!!!!!!!!!!!!");
@@ -261,7 +266,7 @@ void loadChannelSetupJSONSettings(File f)
 			// Serial.println("***************");
 			// Serial.println(line);
 			key = strtok(NULL, "\"");
-			Serial.println("KEY:");
+			Serial.println("KEYLC:");
 			Serial.println(key);
 			if (!key)
 			{
@@ -299,24 +304,66 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 	// global line;
 	int channelID = atoi(channelString);
 	int charcount;
+	bool channelEnd=false;
+
 	Serial.println("channel config for:");
 	Serial.println(channelID);
 	Serial.println("is:");
 	Serial.println(channelJSON);
+	Serial.println("gggggggggggggggggggggggg");
+	Serial.println(buffer);
 
 	while (buffer.available())
 	{
-		charcount = buffer.readBytesUntil(',', channelJSON, 128);
+		Serial.println("rrrrrrrrrrrrrrrrrrrrrrrrrrr***********");
+		Serial.println(channelJSON);	
+		charcount = buffer.readBytesUntil(',', channelJSON, 1024);
 		channelJSON[charcount] = '\0';
 		Serial.println("***************************************");
 		Serial.println(channelJSON);
+		Serial.println("******CHECK FOR END AND START KV EXTRACT******");
 
+		char* pPosition = strchr(channelJSON, '}');
+		if(pPosition != NULL){
+			Serial.println("END OF CHANNEL FOUND");
+			channelEnd = true;
+		}
+
+		// strcpy(testbuffer, line);
+		// const char channelTerm = '}';
+		// char *c = channelJSON;
+		// while (*c)
+		// {
+		// 	Serial.printf("%s %c", *c, channelTerm);
+		// 	if (strchr(*c, channelTerm))
+		// 	{
+		// 		Serial.println("end of Channel Found");
+		// 		channelEnd=true;
+		// 	}
+
+		// 	c++;
+		// }
+
+
+
+
+
+
+
+		
+		Serial.println("strtok sequence");
 		key = strtok(channelJSON, "\"");
-		key = strtok(NULL, "\"");
+		// Serial.println(key);
 		value = strtok(NULL, "\"");
+		// Serial.println(key);
 		value = strtok(NULL, "\"");
+		// Serial.println(value);
+		// value = strtok(NULL, "\"");
+		// Serial.println(value);
 
-		Serial.println("KEY:");
+
+
+		Serial.println("KEYIC:");
 		Serial.println(key);
 		if (!key)
 		{
@@ -328,26 +375,43 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 		Serial.println(value);
 		Serial.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 
+		Serial.println("b4chkA");
+
+		if (!value){
+			continue;
+			// Serial.println("putup null string");
+			// // char nullstring[8]="nullSTR";
+			// // strcpy(value,nullstring);
+			// value[0]='A';
+			// Serial.println("putup null char1 done");
+			// value[1]='\0';
+			// Serial.println("putup null string done");
+			// // strcpy(value, (" ").c_str()); 
+
+		}
+
+		Serial.println("chkA");
 		if (strcmp(key, "NAME") == 0)
 		{
-			strncpy(channels[channelID].name, value, 30);
+			strncpy(channels[channelID].name, value, 50);
 		}
 		else if (strcmp(key, "TYPE") == 0)
 		{
-			strncpy(channels[channelID].type, value, 1);
+			strncpy(channels[channelID].type, value, 20);
 		}
 		else if (strcmp(key, "CHMAPPING") == 0)
 		{
-			strncpy(channels[channelID].chmapping, value, 2);
+			strncpy(channels[channelID].chmapping, value, 20);
 		}
 		else if (strcmp(key, "ADDRESSING") == 0)
 		{
 			Serial.println("ADDRESS IS:");
 			Serial.println(value);
-			channels[channelID].CTRLAddress = atoi(strtok(value, ";"));
-			channels[channelID].address1 = atoi(strtok(NULL, ";"));
-			channels[channelID].address2 = atoi(strtok(NULL, ";"));
-			channels[channelID].address3 = atoi(strtok(NULL, ";"));
+			channels[channelID].CTRLAddress = atoi(strtok(value, "/"));
+			Serial.println(value);
+			channels[channelID].address1 = atoi(strtok(NULL, "/"));
+			channels[channelID].address2 = atoi(strtok(NULL, "/"));
+			channels[channelID].address3 = atoi(strtok(NULL, "/"));
 
 			Serial.println("SEGMENTS ARE:");
 			Serial.println(channels[channelID].CTRLAddress);
@@ -355,9 +419,11 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 			Serial.println(channels[channelID].address2);
 			Serial.println(channels[channelID].address3);
 		}
-
-		if (strchr(channelJSON, '}'))
+		Serial.println("chkB");
+		
+		if (channelEnd)
 		{
+			Serial.println("end of channel JSON reached");
 			//the end of the channelJSON has been found
 			return;
 		}
@@ -376,7 +442,7 @@ void sendChannelConfigJSON()
 
 	char charString[50];
 
-	for (int i = 1; i < 255; i++)
+	for (int i = 1; i < 51; i++)
 	{
 		// Serial.print("working on channel");
 		// Serial.println(i);
@@ -604,7 +670,12 @@ void setup()
 		delay(250);
 		Serial.print('.');
 		i++;
-		if (i > 60)
+		///////////////////////////////
+		///////////////////////////////
+		//////////////////NEEED TO REVERT THIS TO A LONGER SERACH TIME
+		///////////////////////////////
+		///////////////////////////////
+		if (i > 10)
 		{
 			Serial.println("WIFI FAIL");
 			validWIFI = false;

@@ -1,0 +1,22 @@
+{
+	"CHANNELS": {
+		"1": {
+			"NAME": "Sample DMX",
+			"TYPE": "3",
+			"CHMAPPING": "12",
+			"ADDRESSING": "2;15;13;9"
+		},
+		"2": {
+			"NAME": "Sample DMX",
+			"TYPE": "1",
+			"CHMAPPING": "12",
+			"ADDRESSING": "2;15;13;9"
+		},
+		"3": {
+			"NAME": "Sample DMX",
+			"TYPE": "1",
+			"CHMAPPING": "12",
+			"ADDRESSING": "2;15;13;9"
+		},	
+	}
+}

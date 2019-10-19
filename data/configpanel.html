@@ -1,19 +1,34 @@
-<script
+<!-- <script
   src="https://code.jquery.com/jquery-3.3.1.min.js"
   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
   crossorigin="anonymous">
+</script> -->
+<script
+  src="http://192.168.1.1/jquery-3.3.1.min.js"
+  crossorigin="anonymous">
 </script>
 <script src="https://kit.fontawesome.com/a123c97772.js"></script>
+
+
+
+<!-- bootstrap specific //-->
+<!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script> -->
+
+<link rel="stylesheet" href="http://192.168.1.1/bootstrap.min.css" crossorigin="anonymous">
+<script src="http://192.168.1.1/popper.min.js" crossorigin="anonymous"></script>
+<script src="http://192.168.1.1/bootstrap.min.js" crossorigin="anonymous"></script>
+
+
 <script src="configpanel.js"></script>
 <script src="channelpanel.js"></script>
 <script src="editableFields.js"></script>
 <script src="common.js"></script>
-
-
-<!-- bootstrap specific //-->
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+<!-- <script src="http://192.168.1.1/configpanel.js"></script>
+<script src="http://192.168.1.1/channelpanel.js"></script>
+<script src="http://192.168.1.1/editableFields.js"></script>
+<script src="http://192.168.1.1/common.js"></script> -->
 
 <div class="passthrough_info" id="init_config" style="display:none">
 ~!@#$PASSTHROUGH~!@#$
@@ -157,8 +172,8 @@
   configData={};
   channelConfigData={};
 
-  //configEndpoint="/CFG";
-  configEndpoint="http://192.168.88.154/CFG";
+  configEndpoint="http://192.168.1.1/CFG";
+  // configEndpoint="http://192.168.88.154/CFG";
   initConfigPage();
   loadChannelsPanel(config=true);
 
