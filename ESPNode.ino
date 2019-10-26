@@ -4,8 +4,14 @@
 #include <ESP8266mDNS.h>
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
+// #include "cjson/cJSON.h"
+// #include "cjson/cJSON.c"
+#include "ArduinoJson.h"
+// #include "cJSON.h"
 #include <FS.h> // Include the SPIFFS library
 #include "espDMX.h"
+
+#define NUM_OF_CHANNELS 51
 
 String buffer = "";
 
@@ -68,7 +74,7 @@ struct channel
 };
 
 //array of channels, not zero indexed
-struct channel channels[51];
+struct channel channels[NUM_OF_CHANNELS];
 
 ///////////////////////////
 /////CONFIG FUNCTIONS//////
@@ -77,6 +83,7 @@ struct channel channels[51];
 //read config file
 void loadConfigJSONSettings(File f)
 {
+
 	char line[512];
 	char *key, *value;
 	int charcount;
@@ -87,30 +94,30 @@ void loadConfigJSONSettings(File f)
 		// memset(&line[0], 0, sizeof(line));
 		charcount = f.readBytesUntil(',', line, 128);
 		line[charcount] = '\0';
-		Serial.println("!!!!!!!!!!!!!!!!!");
-		Serial.println(line);
-		Serial.println("!!!!!!!!!!!!!!!!!");
-		Serial.print(line[0]);
+		// Serial.println("!!!!!!!!!!!!!!!!!");
+		// Serial.println(line);
+		// Serial.println("!!!!!!!!!!!!!!!!!");
+		// Serial.print(line[0]);
 		if (line[0] == '"' && line != NULL)
 		{
 			memmove(line + 1, line, strlen(line) + 1);
 			line[0] = ' ';
-			Serial.println("line shifted");
-			Serial.println(line);
+			// Serial.println("line shifted");
+			// Serial.println(line);
 		}
 
 		key = strtok(line, "\"");
 
 		while (key != NULL && line[0] != '\0')
 		{
-			Serial.println("***************");
-			Serial.println(line);
+			// Serial.println("***************");
+			// Serial.println(line);
 			key = strtok(NULL, "\"");
-			Serial.println("KEY:");
+			// Serial.println("KEY:");
 
 			if (!key)
 			{
-				Serial.println("loop break");
+				// Serial.println("loop break");
 				break;
 			}
 			// Serial.println(key);
@@ -118,28 +125,28 @@ void loadConfigJSONSettings(File f)
 			//check to see if this is a key we want a value for
 			if (strcmp(key, "ESPconfig") == 0)
 			{
-				Serial.println("header--ignore");
+				// Serial.println("header--ignore");
 			}
 			else if (strcmp(key, "WIFISSID") == 0)
 			{
-				Serial.println("wifissidset");
+				// Serial.println("wifissidset");
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
 				strcpy(WIFIssid, value);
 			}
 			else if (strcmp(key, "WIFIPW") == 0)
 			{
-				Serial.println("wifipwset");
+				// Serial.println("wifipwset");
 
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
-				Serial.print("wifi pw");
-				Serial.print(value);
+				// Serial.print("wifi pw");
+				// Serial.print(value);
 				strcpy(WIFIpassword, value);
 			}
 			else if (strcmp(key, "NODENAME") == 0)
 			{
-				Serial.println("nodenameset");
+				// Serial.println("nodenameset");
 
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
@@ -147,7 +154,7 @@ void loadConfigJSONSettings(File f)
 			}
 			else if (strcmp(key, "NODEDESC") == 0)
 			{
-				Serial.println("nodedescset");
+				// Serial.println("nodedescset");
 
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
@@ -155,7 +162,7 @@ void loadConfigJSONSettings(File f)
 			}
 			else if (strcmp(key, "IOSRESOURCES") == 0)
 			{
-				Serial.println("IOSRESOURCESset");
+				// Serial.println("IOSRESOURCESset");
 
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
@@ -163,7 +170,7 @@ void loadConfigJSONSettings(File f)
 			}
 			else
 			{
-				Serial.println("trash this value...unknown key");
+				// Serial.println("trash this value...unknown key");
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
 			}
@@ -235,22 +242,23 @@ void loadChannelSetupJSONSettings(File f)
 {
 	char line[512];
 	char *key, *value;
+	char channelDefinition[256];
 	int charcount;
 
-	// read file line by line
+	// read file line by line looking for any KVs
 	while (f.available())
 	{
-
-		charcount = f.readBytesUntil(',', line, 512);
+		//Read Key
+		charcount = f.readBytesUntil(':', line, 512);
 		line[charcount] = '\0';
 
+		Serial.println("-----!!!!!!!!!!!!!!!!!");
+		Serial.println(line);
+		Serial.println("+++++!!!!!!!!!!!!!!!!!");
 
+		Serial.println(line[0]);
 
-		Serial.println("!!!!!!!!!!!!!!!!!");
-		// Serial.println(line);
-		// Serial.println("!!!!!!!!!!!!!!!!!");
-
-		Serial.print(line[0]);
+		//Remove opening paren or space
 		if (line[0] == '"' && line != NULL)
 		{
 			memmove(line + 1, line, strlen(line) + 1);
@@ -259,15 +267,22 @@ void loadChannelSetupJSONSettings(File f)
 			Serial.println(line);
 		}
 
+		//get any text before closing paren
 		key = strtok(line, "\"");
 
+		Serial.println("key check");
+		Serial.println(key);
+
+		//if valid key and the line hasn't terminated
 		while (key != NULL && line[0] != '\0')
 		{
-			// Serial.println("***************");
-			// Serial.println(line);
+			Serial.println("***************");
+			Serial.println(line);
 			key = strtok(NULL, "\"");
 			Serial.println("KEYLC:");
 			Serial.println(key);
+			Serial.println(line);
+			Serial.println(f);
 			if (!key)
 			{
 				Serial.println("loop break");
@@ -275,27 +290,105 @@ void loadChannelSetupJSONSettings(File f)
 			}
 
 			//check to see if this is a key we want a value for
+
+			//start of channel block
 			if (strcmp(key, "CHANNELS") == 0)
 			{
-				Serial.println("header--ignore");
-			}
-			else if (atoi(key) > 0)
-			{
-				Serial.println("channel found:");
-				value = strtok(NULL, "\"");
-				initChannel(f, key, value);
-				Serial.println(key);
-			}
-			else
-			{
-				Serial.println("trash this value...unknown key");
-				value = strtok(NULL, "\"");
-				value = strtok(NULL, "\"");
-			}
+				Serial.println("found channel block");
 
-			key = strtok(NULL, "\"");
+				//try to find start of ch array
+				while (f.readBytes(channelDefinition, 1))
+				{
+					// Serial.println("Read Byte$");
+					// Serial.println(channelDefinition);
+					// Serial.println(channelDefinition[0]);
+					switch (channelDefinition[0])
+					{
+					//start of channel dict
+					case '[':
+						break;
+					//end of channel dict, kick out of this loop
+					case ']':
+						continue;
+						break;
+					//start of Channel Defintion, initialize on it
+					case '{':
+						charcount = f.readBytesUntil('}', channelDefinition, 256);
+						Serial.println("channel definition found, initing");
+
+						//make it a pretty JSON by adding {}
+						memmove(channelDefinition + 1, channelDefinition, strlen(channelDefinition) + 1);
+						channelDefinition[0] = '{';
+						channelDefinition[charcount + 1] = '}';
+						channelDefinition[charcount + 2] = '\0';
+
+						initChannelFromJSON(channelDefinition);
+						break;
+					//end of Channel Defintion, ignor look for next one
+					case '}':
+						break;
+					default:
+						break;
+					}
+				}
+			}
 		}
 	}
+}
+
+void initChannelFromJSON(char *channelString)
+{
+	Serial.println("parsing channel");
+	Serial.println(channelString);
+	StaticJsonDocument<512> channelJSON;
+	const char *holder;
+
+	// Deserialize the JSON document
+	DeserializationError error = deserializeJson(channelJSON, channelString);
+
+	// Test if parsing succeeds.
+	if (error)
+	{
+		Serial.print(F("deserializeJson() failed: "));
+		Serial.println(error.c_str());
+		return;
+	}
+
+	//GET CHANNEL ID
+	int channelID = channelJSON["CHANNELID"];
+	Serial.println("channel ID is:");
+	Serial.println(channelID);
+
+	//COPY CHANNEL NAME FROM CONFIG JSON
+	holder = channelJSON["NAME"];
+	Serial.println(holder);
+	strncpy(channels[channelID].name, holder, 50);
+
+	//SET CHANNEL MAPPING
+	strncpy(channels[channelID].chmapping, channelJSON["CHMAPPING"], 20);
+
+	//GET ADDRESSING INFO AND SPLIT
+	char *addressing;
+	strcpy(addressing, channelJSON["ADDRESSING"]);
+
+	Serial.println("ADDRESS IS:");
+	Serial.println(addressing);
+	channels[channelID].CTRLAddress = atoi(strtok(addressing, "/"));
+	Serial.println(addressing);
+	channels[channelID].address1 = atoi(strtok(NULL, "/"));
+	channels[channelID].address2 = atoi(strtok(NULL, "/"));
+	channels[channelID].address3 = atoi(strtok(NULL, "/"));
+
+	Serial.println("SEGMENTS ARE:");
+	Serial.println(channels[channelID].CTRLAddress);
+	Serial.println(channels[channelID].address1);
+	Serial.println(channels[channelID].address2);
+	Serial.println(channels[channelID].address3);
+
+	Serial.println(channelJSON["NAME"].as<char *>());
+	Serial.println(channelJSON["ADDRESSING"].as<char *>());
+
+	Serial.println("ch parse done");
 }
 
 void initChannel(File buffer, char *channelString, char *channelJSON)
@@ -304,7 +397,7 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 	// global line;
 	int channelID = atoi(channelString);
 	int charcount;
-	bool channelEnd=false;
+	bool channelEnd = false;
 
 	Serial.println("channel config for:");
 	Serial.println(channelID);
@@ -316,15 +409,16 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 	while (buffer.available())
 	{
 		Serial.println("rrrrrrrrrrrrrrrrrrrrrrrrrrr***********");
-		Serial.println(channelJSON);	
+		Serial.println(buffer);
 		charcount = buffer.readBytesUntil(',', channelJSON, 1024);
 		channelJSON[charcount] = '\0';
 		Serial.println("***************************************");
 		Serial.println(channelJSON);
 		Serial.println("******CHECK FOR END AND START KV EXTRACT******");
 
-		char* pPosition = strchr(channelJSON, '}');
-		if(pPosition != NULL){
+		char *pPosition = strchr(channelJSON, '}');
+		if (pPosition != NULL)
+		{
 			Serial.println("END OF CHANNEL FOUND");
 			channelEnd = true;
 		}
@@ -344,13 +438,6 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 		// 	c++;
 		// }
 
-
-
-
-
-
-
-		
 		Serial.println("strtok sequence");
 		key = strtok(channelJSON, "\"");
 		// Serial.println(key);
@@ -360,8 +447,6 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 		// Serial.println(value);
 		// value = strtok(NULL, "\"");
 		// Serial.println(value);
-
-
 
 		Serial.println("KEYIC:");
 		Serial.println(key);
@@ -377,7 +462,8 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 
 		Serial.println("b4chkA");
 
-		if (!value){
+		if (!value)
+		{
 			continue;
 			// Serial.println("putup null string");
 			// // char nullstring[8]="nullSTR";
@@ -386,8 +472,7 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 			// Serial.println("putup null char1 done");
 			// value[1]='\0';
 			// Serial.println("putup null string done");
-			// // strcpy(value, (" ").c_str()); 
-
+			// // strcpy(value, (" ").c_str());
 		}
 
 		Serial.println("chkA");
@@ -397,6 +482,19 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 		}
 		else if (strcmp(key, "TYPE") == 0)
 		{
+			if (value == "DELETE")
+			{
+				Serial.println("DELETE THIS CHANNEL");
+				for (int c = channelID; c < NUM_OF_CHANNELS + 1; c++)
+				{
+					channels[c] = channels[c + 1];
+				}
+
+				struct channel emptyChannel;
+				channels[NUM_OF_CHANNELS] = emptyChannel;
+
+				return;
+			}
 			strncpy(channels[channelID].type, value, 20);
 		}
 		else if (strcmp(key, "CHMAPPING") == 0)
@@ -420,7 +518,7 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 			Serial.println(channels[channelID].address3);
 		}
 		Serial.println("chkB");
-		
+
 		if (channelEnd)
 		{
 			Serial.println("end of channel JSON reached");
@@ -628,6 +726,86 @@ void handleWEBConfig()
 	Serial.println("end of web config");
 }
 
+char getLiferaft(char param)
+{
+	char liferaft[6];
+
+	File f = SPIFFS.open("/liferaft.dat", "r");
+	if (!f)
+	{
+		f.close();
+		f = SPIFFS.open("/liferaft.dat", "w+");
+		Serial.println("no liferaft, create new one");
+
+		liferaft[0] = '0';
+		liferaft[1] = '0';
+		liferaft[2] = '0';
+		liferaft[3] = '\0';
+
+		Serial.printf("%s\n", liferaft);
+
+		Serial.println("liferaft created, resetting node");
+		f.close();
+	}
+	else
+	{
+		f.readBytes(liferaft, 2);
+		// Serial.println("RAW LIFERAFT");
+		// Serial.println(liferaft);
+		// Serial.printf("check is CFG%c CH%c\n", liferaft[0], liferaft[1]);
+	}
+
+	switch (param)
+	{
+	//return entire check string
+	// case 'A':
+	// 	return liferaft;
+
+	//return channelcfg check string
+	case 'C':
+		return liferaft[2];
+
+	//return config check string
+	case 'F':
+		return liferaft[1];
+	}
+}
+
+void updateLiferaft(char param, char value)
+{
+	char liferaft[6];
+
+	//use getLiferaft to check if the file exists and create if not
+	getLiferaft('C');
+
+	File f = SPIFFS.open("/liferaft.dat", "w+");
+
+	f.readBytes(liferaft, 2);
+	// Serial.printf("ready for write check is CFG%c CH%c\n", liferaft[0], liferaft[1]);
+	Serial.printf("value: %c   param: %c", value, param);
+
+	switch (param)
+	{
+	//update channelcfg check char
+	case 'C':
+		liferaft[2] = value;
+		break;
+
+	//update config check char
+	case 'F':
+		liferaft[1] = value;
+		break;
+	}
+
+	liferaft[3] = '\0';
+	// f.printf("%s\n", liferaft);
+
+	Serial.println("\nnew liferaft");
+	Serial.printf("%s\n", liferaft);
+
+	f.close();
+}
+
 ///////////////////////////
 /////ESP FUNCTIONS//////
 ///////////////////////////
@@ -639,6 +817,10 @@ void setup()
 	Serial.println('\n');
 
 	SPIFFS.begin(); // Start the SPI Flash Files System
+
+	// char corruptionCheck = '0';
+
+	//check to see if the configuration was valid
 
 	// open config file
 	File f = SPIFFS.open("/config.dat", "r");
@@ -675,7 +857,7 @@ void setup()
 		//////////////////NEEED TO REVERT THIS TO A LONGER SERACH TIME
 		///////////////////////////////
 		///////////////////////////////
-		if (i > 10)
+		if (i > 30)
 		{
 			Serial.println("WIFI FAIL");
 			validWIFI = false;
@@ -706,17 +888,43 @@ void setup()
 	Serial.println("loading channels");
 	// Serial.println("JSON END");
 
+	// corruptionCheck = getLiferaft('C');
+	// if (corruptionCheck > '2')
+	// {
+	// 	Serial.println("corruption check failed, remove file");
+	// 	f = SPIFFS.open("/channelSetup.dat", "w+");
+	// 	f.print("");
+	// 	f.close();
+	// 	// remove("/channelSetup.dat");
+	// }
+	// else
+	// {
+	// 	Serial.printf("INCREMENT CORRUPTION CHECK FROM %c to %c", corruptionCheck, corruptionCheck + 1);
+	// 	updateLiferaft('C', corruptionCheck + 1);
+	// }
+
 	f = SPIFFS.open("/channelSetup.dat", "r");
+	Serial.println("channel file open");
+
 	if (!f)
 	{
-		Serial.println("file open failed");
+		Serial.println("file open failed, create empty file");
+		f.close();
+		f = SPIFFS.open("/channelSetup.dat", "w+");
+		f.print("");
+		f.close();
+		loadChannelSetupJSONSettings(f);
 	}
 	else
 	{
-		Serial.println("====== Reading from SPIFFS file =======");
+		Serial.println("====== Reading channel settings from SPIFFS file =======");
+		// Serial.println("File Content:");
+
 		//process config file
 		loadChannelSetupJSONSettings(f);
+		f.close();
 	}
+	// updateLiferaft('C', '0');
 	Serial.println("load completed");
 }
 

@@ -1,1 +1,18 @@
-{"CHANNELS":{"1":{"ADDRESSING":"0,0,0,0","CHMAPPING":"0","TYPE":"DMXSWITCH"},"3":{"ADDRESSING":"0,0,0,0","CHMAPPING":"0","NAME":"New Channel","TYPE":"ANALOG"}}}
+{"CHANNELS":[
+    {"CHANNELID":"1",
+    "NAME":"New Channel 1",
+    "ADDRESSING":"0/0/0/0",
+    "CHMAPPING":"0",
+    "TYPE":"DMXSWITCH"},
+    {"CHANNELID":"2",
+    "NAME":"New Channel 2",
+    "ADDRESSING":"0/0/0/0",
+    "CHMAPPING":"0",
+    "TYPE":"DMXSWITCH"},
+    {"CHANNELID":"3",
+    "NAME":"New Channel 3",
+    "ADDRESSING":"0/0/0/0",
+    "CHMAPPING":"0",
+    "TYPE":"DMXSWITCH"}
+]}
+    

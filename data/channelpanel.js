@@ -27,25 +27,25 @@ function loadChannelsPanel(configMode = false) {
     //message recieved, assume it's correctly formatted
     ajax.done(function (data) {
         channelConfigData = JSON.parse(data).channels;
-        
+
         //get channel count
         jQuery.each(channelConfigData, function (i, channel) {
             if (channel.TYPE == '' || channel.TYPE === undefined || channel.TYPE == null) {
 
             }
-            else{
-                console.log("channel found",i);
-                numberOfChannels=parseInt(i);
+            else {
+                console.log("channel found", i);
+                numberOfChannels = parseInt(i);
             }
 
 
-        }); 
+        });
 
 
         jQuery.each(channelConfigData, function (i, channel) {
 
             // console.log("working on", i, (numberOfChannels);
-            if (i>=(numberOfChannels+1)){
+            if (i >= (numberOfChannels + 1)) {
                 console.log("bail out of extra channels");
                 return
             }
@@ -56,7 +56,7 @@ function loadChannelsPanel(configMode = false) {
                 channel.TYPE = 'EMPTY'
                 channel.NAME = 'OPEN CHANNEL'
             }
-            
+
 
             if (!(channel.TYPE in channelTypes)) {
                 channel.TYPE = "NOSUPPORT";
@@ -64,7 +64,7 @@ function loadChannelsPanel(configMode = false) {
 
             }
 
-            
+
 
 
             addChannelPanel(channelID = i, channel, configMode);
@@ -375,12 +375,12 @@ function channelEditorDOM(channelID) {
 }
 
 
-function saveChannelConfig(channelID, mode="SAVE") {
+function saveChannelConfig(channelID, mode = "SAVE") {
 
     console.log('new value is', $('.channelObject[channelid=' + channelID + '] .channelTypeSelector').val());
 
     updatedChannel = {};
-    if(mode=="SAVE"){
+    if (mode == "SAVE") {
 
         var addressing = [0, 0, 0, 0];
 
@@ -414,20 +414,21 @@ function saveChannelConfig(channelID, mode="SAVE") {
 
 
 
-
+        debugger
         updatedChannel["ADDRESSING"] = addressing.join('/');
         updatedChannel["CHMAPPING"] = "0";
         updatedChannel["NAME"] = $('.channelName[ajax_targetobjectid=' + channelID + '] .editableItemValue').html();
         updatedChannel["TYPE"] = $('.channelObject[channelid=' + channelID + '] .channelTypeSelector').val();
     }
-    else if(mode=="DELETE"){
-        if(channelID==numberOfChannels){
+    else if (mode == "DELETE") {
+        if (channelID == numberOfChannels) {
             console.log("this is the last channel, just remove")
+
         }
-        else{
+        else {
             console.log("this channel is in the middle upshift up")
         }
-        updatedChannel["TYPE"]="DELETE"
+        updatedChannel["TYPE"] = "DELETE"
 
     }
 
@@ -526,10 +527,10 @@ $(document).on('click', '.saveChannelConfigButton', function () {
 
 $(document).on('click', '.deleteChannelConfigButton', function () {
     var channelID = $(this).parent().parent().parent().attr('channelID');
-    $('.channelObject[channelid=' + channelID + ']').parent().remove();
+    // $('.channelObject[channelid=' + channelID + ']').parent().remove();
 
     console.log('delete channel :', channelID);
-    saveChannelConfig(channelID,'DELETE');
+    saveChannelConfig(channelID, 'DELETE');
 
 });
 
