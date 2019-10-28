@@ -26,7 +26,7 @@ function loadChannelsPanel(configMode = false) {
 
     //message recieved, assume it's correctly formatted
     ajax.done(function (data) {
-        channelConfigData = JSON.parse(data).channels;
+        channelConfigData = JSON.parse(data).CHANNELS;
 
         //get channel count
         jQuery.each(channelConfigData, function (i, channel) {
@@ -35,7 +35,7 @@ function loadChannelsPanel(configMode = false) {
             }
             else {
                 console.log("channel found", i);
-                numberOfChannels = parseInt(i);
+                numberOfChannels = parseInt(channel.CHANNELID);
             }
 
 
@@ -45,7 +45,7 @@ function loadChannelsPanel(configMode = false) {
         jQuery.each(channelConfigData, function (i, channel) {
 
             // console.log("working on", i, (numberOfChannels);
-            if (i >= (numberOfChannels + 1)) {
+            if (i >= (numberOfChannels)) {
                 console.log("bail out of extra channels");
                 return
             }
@@ -67,7 +67,7 @@ function loadChannelsPanel(configMode = false) {
 
 
 
-            addChannelPanel(channelID = i, channel, configMode);
+            addChannelPanel(channelID = channel.CHANNELID, channel, configMode);
         });
     });
 }
@@ -81,6 +81,9 @@ function addNewChannel() {
     channel["CHMAPPING"] = "0";
     channel["NAME"] = "New Channel";
     channel["TYPE"] = "ANALOG";
+
+    debugger
+
 
     var channelID = numberOfChannels + 1;
     numberOfChannels += 1;
@@ -414,7 +417,6 @@ function saveChannelConfig(channelID, mode = "SAVE") {
 
 
 
-        debugger
         updatedChannel["ADDRESSING"] = addressing.join('/');
         updatedChannel["CHMAPPING"] = "0";
         updatedChannel["NAME"] = $('.channelName[ajax_targetobjectid=' + channelID + '] .editableItemValue').html();

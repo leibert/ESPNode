@@ -51,7 +51,7 @@ struct channel
 	//1=Analog
 	//2=PWM
 	//5=DMX
-	char type[1];
+	char type[10];
 
 	//Mapping of channels
 	//01=Single Channel
@@ -75,6 +75,8 @@ struct channel
 
 //array of channels, not zero indexed
 struct channel channels[NUM_OF_CHANNELS];
+
+
 
 ///////////////////////////
 /////CONFIG FUNCTIONS//////
@@ -341,7 +343,7 @@ void initChannelFromJSON(char *channelString)
 	Serial.println("parsing channel");
 	Serial.println(channelString);
 	StaticJsonDocument<512> channelJSON;
-	const char *holder;
+	char *holder;
 
 	// Deserialize the JSON document
 	DeserializationError error = deserializeJson(channelJSON, channelString);
@@ -360,21 +362,29 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(channelID);
 
 	//COPY CHANNEL NAME FROM CONFIG JSON
-	holder = channelJSON["NAME"];
+	holder = strdup(channelJSON["NAME"]);
 	Serial.println(holder);
-	strncpy(channels[channelID].name, holder, 50);
+	strncpy(channels[channelID].name, holder, 30);
+
+	//COPY CHANNEL TYPE FROM CONFIG JSON
+	holder = strdup(channelJSON["TYPE"]);
+	Serial.println(holder);
+	strncpy(channels[channelID].type, channelJSON["TYPE"], 10);
 
 	//SET CHANNEL MAPPING
-	strncpy(channels[channelID].chmapping, channelJSON["CHMAPPING"], 20);
+	strncpy(channels[channelID].chmapping, channelJSON["CHMAPPING"], 2);
 
 	//GET ADDRESSING INFO AND SPLIT
-	char *addressing;
-	strcpy(addressing, channelJSON["ADDRESSING"]);
+
+	holder = strdup(channelJSON["ADDRESSING"]);
+	Serial.println("address coppied");
 
 	Serial.println("ADDRESS IS:");
-	Serial.println(addressing);
-	channels[channelID].CTRLAddress = atoi(strtok(addressing, "/"));
-	Serial.println(addressing);
+	Serial.println(holder);
+	holder = strtok(holder, "/");
+	Serial.println(holder);
+	channels[channelID].CTRLAddress = atoi(strdup(holder));
+	Serial.println(holder);
 	channels[channelID].address1 = atoi(strtok(NULL, "/"));
 	channels[channelID].address2 = atoi(strtok(NULL, "/"));
 	channels[channelID].address3 = atoi(strtok(NULL, "/"));
@@ -533,7 +543,7 @@ void initChannel(File buffer, char *channelString, char *channelJSON)
 void sendChannelConfigJSON()
 {
 	bool firstChildElement = true;
-	strcpy(bufferB, "{\"channels\":{\n");
+	strcpy(bufferB, "{\"CHANNELS\":[\n");
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
 	server.send(200, "text/html", bufferB);
 	// Serial.println(i);
@@ -562,13 +572,17 @@ void sendChannelConfigJSON()
 		//Create JSON object with the channel index as ID
 		// strcat(bufferB, "\"%d"");
 
-		snprintf(charString, 50, "\"%d\":{", i);
+		snprintf(charString, 50, "{\"CHANNELID\":\"%i\",", i);
 		strcat(bufferB, charString);
 
-		snprintf(charString, 50, "\"NAME\":\"%s\",", channels[i].name);
+		snprintf(charString, 30, "\"NAME\":\"%s\",", channels[i].name);
 		strcat(bufferB, charString);
+
+		Serial.println("parsing ch type");
+		Serial.println(channels[i].type);
 		snprintf(charString, 50, "\"TYPE\":\"%s\",", channels[i].type);
 		strcat(bufferB, charString);
+
 		snprintf(charString, 50, "\"CHMAPPING\":\"%s\",", channels[i].chmapping);
 		strcat(bufferB, charString);
 
@@ -578,7 +592,7 @@ void sendChannelConfigJSON()
 		server.sendContent(bufferB);
 	}
 	Serial.println("looping done");
-	server.sendContent("}\n}");
+	server.sendContent("]\n}");
 
 	server.sendContent("");
 	Serial.println("need to close server");
