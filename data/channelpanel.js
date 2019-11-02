@@ -25,8 +25,11 @@ function loadChannelsPanel(configMode = false) {
     });
 
     //message recieved, assume it's correctly formatted
-    ajax.done(function (data) {
-        channelConfigData = JSON.parse(data).CHANNELS;
+    ajax.always(function (data) {
+    // ajax.done(function (data) {
+        // channelConfigData = JSON.parse(data).CHANNELS;
+        channelConfigData = JSON.parse(testCHConfig).CHANNELS;
+        console.log(channelConfigData);
 
         //get channel count
         jQuery.each(channelConfigData, function (i, channel) {
@@ -70,6 +73,46 @@ function loadChannelsPanel(configMode = false) {
             addChannelPanel(channelID = channel.CHANNELID, channel, configMode);
         });
     });
+
+
+
+    ajax2 = $.get(statusEndpoint + "?getCHStatus");
+
+    ajax2.fail(function (data) {
+        //THIS CREATES A RACE CONDITON
+        //!!!!!!!!!!!!!!!FIX!!!!!!!!!!!!!!!!!!!!!!!! 
+        //if(chann)
+        // channelConfigData = {};
+        $('#message').html("UNABLE TO RETRIEVE CONFIGURATION");
+    });
+
+    //message recieved, assume it's correctly formatted
+    ajax2.always(function (data) {
+        console.log(data);
+        // channelValueData = JSON.parse(data).CHANNELS;
+        channelValueData = JSON.parse(testCHValues);
+        console.log(channelValueData);
+
+
+        jQuery.each(channelValueData,function(index,channelValue){
+            updateChannelValues(channelValue);
+        });
+
+    });
+}
+
+function updateChannelValues(channelData){
+    debugger;
+
+    console.log("processing channel value update",channelData);
+    $('.channelObject[channelID='+channelData.CHANNELID+'] .channelValue').val(channelData.VALA);
+    $('.channelObject[channelID=2] .channelValue[subchannel=1]').prop('checked', true)
+
+
+
+    channel
+
+
 }
 
 
@@ -82,7 +125,6 @@ function addNewChannel() {
     channel["NAME"] = "New Channel";
     channel["TYPE"] = "ANALOG";
 
-    debugger
 
 
     var channelID = numberOfChannels + 1;
@@ -153,7 +195,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 
     }
 
-    var channelController = $('<div class="channelControllerContainer">').html(channelControllerDOM(channelID))
+    var channelController = $('<div class="channelControllerContainer">').html(channelControllerDOM(channel))
     channelDOM.append(channelController);
     // numberOfChannels += 1;
 
@@ -187,7 +229,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 function createFaderElement(channelID, subchannel = 1, value = 0, label = 'Output') {
     var faderElement = $('<span>').addClass("channelFaderContainer");;
     faderElement.append($('<label for="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '">' + label + ': ' + value + '</label>'));
-    faderElement.append($('<input type="range" class="custom-range channelFader" id="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + value + '">'));
+    faderElement.append($('<input type="range" class="custom-range channelFader channelValue" id="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + value + '">'));
     return faderElement
 }
 function createRGBElement(channelID, subchannel = 0, valueR = 0, valueG = 0, valueB = 0, label = '') {
@@ -200,19 +242,18 @@ function createRGBElement(channelID, subchannel = 0, valueR = 0, valueG = 0, val
 function createSwitchElement(channelID, subchannel = 1, value = 0, label = 'Output') {
     var switchElement = $('<span>').addClass("custom-control custom-switch");
     if (value) {
-        switchElement.append('<input type="checkbox" class="custom-control-input channelSwitch" id="channelSwitch' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" checked="true">');
+        switchElement.append('<input type="checkbox" class="custom-control-input channelSwitch channelValue" id="channelSwitch' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" checked="true">');
         switchElement.append('<label class="custom-control-label" for="channelSwitch' + channelID + 's' + subchannel + '"subchannel="' + subchannel + '">' + label + ': ON</label>');
     }
     else {
-        switchElement.append('<input type="checkbox" class="custom-control-input channelSwitch" id="channelSwitch' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '">');
+        switchElement.append('<input type="checkbox" class="custom-control-input channelSwitch channelValue" id="channelSwitch' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '">');
         switchElement.append('<label class="custom-control-label" for="channelSwitch' + channelID + 's' + subchannel + '"subchannel="' + subchannel + '">' + label + ': OFF</label>');
     }
     return switchElement
 }
 
 
-function channelControllerDOM(channelID) {
-    var channel = channelConfigData[channelID];
+function channelControllerDOM(channel) {
     var channelType = channel.TYPE;
 
     var channelTypePanel = $('<span>').addClass('channelTypePanel');

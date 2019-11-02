@@ -71,6 +71,12 @@ struct channel
 	unsigned short int address1Value;
 	unsigned short int address2Value;
 	unsigned short int address3Value;
+	unsigned short int valueSetTime;
+
+	unsigned short int fadeTime;
+	char fadeScratch[10];
+
+
 };
 
 //array of channels, not zero indexed
@@ -399,6 +405,7 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(channelJSON["ADDRESSING"].as<char *>());
 
 	Serial.println("ch parse done");
+	channelJSON.clear();
 }
 
 void initChannel(File buffer, char *channelString, char *channelJSON)
@@ -615,6 +622,87 @@ void saveChannelSetupJSON(String buffer)
 	}
 }
 
+
+// void parseChannelValueUpdates(){
+// 	StaticJsonDocument<512> channelStatusJSON;
+
+// 	// Parse JSON object
+// 	DeserializationError error = deserializeJson(doc, client);
+// 	if (error) {
+// 		Serial.print(F("deserializeJson() failed: "));
+// 		Serial.println(error.c_str());
+// 		return;
+
+
+// 	channelStatusJSON.clear();
+
+
+// }
+
+
+
+
+///CHANNEL STATUS
+void sendChannelStatusJSON()
+{
+	StaticJsonDocument<5000> channelStatusJSON;
+
+	for (int i = 1; i <= NUM_OF_CHANNELS; i++)
+	{
+		JsonObject chStatus = channelStatusJSON.createNestedObject();
+		chStatus["CHANNELID"]=i;
+		chStatus["valA"]=channels[i].address1Value;
+		chStatus["valB"]=channels[i].address2Value;
+		chStatus["valC"]=channels[i].address3Value;
+	}
+
+
+	
+	String json;
+	// sendChannelStatusJSON.printTo(json);upp
+
+
+  	serializeJsonPretty(channelStatusJSON, json);
+	Serial.println(json);
+
+	server.setContentLength(measureJsonPretty(channelStatusJSON));
+	server.send(200, "application/json",json);
+	// server.sendContent("");
+
+
+// serializeJson(doc, Serial);
+	// server.println(F("HTTP/1.0 200 OK"));
+	// server.println(F("Content-Type: application/json"));
+	// server.println(F("Connection: close"));
+	// server.print(F("Content-Length: "));
+	// server.println(measureJsonPretty(channelStatusJSON));
+	// server.println();
+
+	// Write JSON document
+	// serializeJsonPretty(channelStatusJSON, server);
+
+	// Disconnect
+	server.stop();
+	channelStatusJSON.clear();
+}
+
+void saveChannelDefaultsJSON(String buffer)
+{
+	File f = SPIFFS.open("/channelDefaults.dat", "w+");
+	if (!f)
+	{
+		Serial.println("file open failed");
+	}
+	else
+	{
+		f.print(buffer);
+		Serial.println("channel Defaults written");
+		Serial.println("resetting node");
+		f.close();
+		ESP.reset();
+	}
+}
+
 ///////////////////////////
 /////WEB SERVER FUNCTIONS//////
 ///////////////////////////
@@ -640,6 +728,7 @@ void setupWebServer(bool configMode)
 	}
 
 	server.on("/CFG", HTTP_ANY, handleWEBConfig); // Call the 'handleLED'
+	server.on("/UPD", HTTP_ANY, handleWEBUpdates); // Call the 'handleLED'
 
 	server.onNotFound([&]() { // If the client requests any URI
 		if (!handleFileRead(server.uri()))
@@ -687,6 +776,45 @@ bool handleFileRead(String path)
 
 ///HANDLER FOR ALL CONFIG FUNCTIONS
 
+void handleWEBUpdates()
+{
+	Serial.println("in handle WEB updates");
+	Serial.println("recieved ARGS are");
+	// for (int i = 0; i < server.args(); i++)
+	// {
+
+	// 	Serial.print(server.argName(i));
+	// 	Serial.println(server.arg(i));up
+	// }
+
+	if (server.method() == HTTP_POST)
+	{
+		Serial.println("updates POST");
+		buffer = server.argName(0);
+		Serial.println("inputis");
+		Serial.println(buffer);
+
+	}
+	else if (server.method() == HTTP_GET)
+	{
+		Serial.println("updates GET");
+		Serial.println(server.argName(0));
+		// Serial.println(server.argName(1));
+
+		if (server.args() && server.argName(0) == "getCHStatus")
+		{
+			Serial.println("get CH Status");
+			sendChannelStatusJSON();
+		}
+
+	}
+	else
+	{
+		Serial.println("OTHER METHOD");
+	}
+	delay(25);
+	Serial.println("end of web config");
+}
 void handleWEBConfig()
 {
 	Serial.println("in handle WEB config");

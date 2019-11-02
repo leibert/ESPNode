@@ -171,12 +171,48 @@
   configData={};
   channelConfigData={};
 
-  //configEndpoint="http://192.168.1.1/CFG";
-  configEndpoint="http://192.168.88.145/CFG";
+  // configEndpoint="http://192.168.88.145/CFG";
+  // statusEndpoint="http://192.168.88.145/UPD";
+  statusEndpoint="http://192.168.1.1/UPD";
+  configEndpoint="http://192.168.1.1/CFG";
   initConfigPage();
   loadChannelsPanel(config=true);
 
 
+
+  testCHConfig='{"CHANNELS":[\
+    {"CHANNELID":"1",\
+    "NAME":"New Channel 1",\
+    "ADDRESSING":"0/0/0/0",\
+    "CHMAPPING":"0",\
+    "TYPE":"DMXSWITCH"},\
+    {"CHANNELID":"2",\
+    "NAME":"New Channel 2",\
+    "ADDRESSING":"0/0/0/0",\
+    "CHMAPPING":"0",\
+    "TYPE":"ANALOG"},\
+    {"CHANNELID":"3",\
+    "NAME":"New Channel 3",\
+    "ADDRESSING":"0/0/0/0",\
+    "CHMAPPING":"0",\
+    "TYPE":"DMXRGB"}\
+]}';
+
+
+  testCHValues='[\
+    {"CHANNELID":"1",\
+    "VALA":"0",\
+    "VALB":"0",\
+    "VALC":"0",\
+    "FADE":"0"\
+    },\
+    {"CHANNELID":"2",\
+    "VALA":"0",\
+    "VALB":"0",\
+    "VALC":"0",\
+    "FADE":"0"\
+    }\
+]';
 
 
   console.log("loading page");
