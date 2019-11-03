@@ -25,10 +25,14 @@ function loadChannelsPanel(configMode = false) {
     });
 
     //message recieved, assume it's correctly formatted
-    ajax.always(function (data) {
-    // ajax.done(function (data) {
-        // channelConfigData = JSON.parse(data).CHANNELS;
-        channelConfigData = JSON.parse(testCHConfig).CHANNELS;
+    ajax.done(function (data) {
+        channelConfigData = {};
+        jQuery.each(JSON.parse(data).CHANNELS, function (i, channel) {
+            channelConfigData[channel.CHANNELID] = channel;
+        });
+
+
+        // channelConfigData = JSON.parse(testCHConfig).CHANNELS;
         console.log(channelConfigData);
 
         //get channel count
@@ -48,7 +52,7 @@ function loadChannelsPanel(configMode = false) {
         jQuery.each(channelConfigData, function (i, channel) {
 
             // console.log("working on", i, (numberOfChannels);
-            if (i >= (numberOfChannels)) {
+            if (i > (numberOfChannels)) {
                 console.log("bail out of extra channels");
                 return
             }
@@ -87,30 +91,28 @@ function loadChannelsPanel(configMode = false) {
     });
 
     //message recieved, assume it's correctly formatted
-    ajax2.always(function (data) {
-        console.log(data);
-        // channelValueData = JSON.parse(data).CHANNELS;
-        channelValueData = JSON.parse(testCHValues);
-        console.log(channelValueData);
+    ajax2.done(function (data) {
+        // console.log(data);
+        channelValueData = JSON.parse(data);
+        // channelValueData = JSON.parse(testCHValues);
+        console.log("channel values", channelValueData);
 
-
-        jQuery.each(channelValueData,function(index,channelValue){
+        jQuery.each(channelValueData, function (index, channelValue) {
             updateChannelValues(channelValue);
         });
 
     });
 }
 
-function updateChannelValues(channelData){
-    debugger;
+function updateChannelValues(channelData) {
 
-    console.log("processing channel value update",channelData);
-    $('.channelObject[channelID='+channelData.CHANNELID+'] .channelValue').val(channelData.VALA);
+    console.log("processing channel value update", channelData);
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue').val(channelData.VALA);
     $('.channelObject[channelID=2] .channelValue[subchannel=1]').prop('checked', true)
 
 
 
-    channel
+    // channel
 
 
 }
@@ -127,8 +129,11 @@ function addNewChannel() {
 
 
 
+
     var channelID = numberOfChannels + 1;
     numberOfChannels += 1;
+
+    channel["CHANNELID"] = channelID;
 
     channelConfigData[channelID] = channel;
     addChannelPanel(channelID, channel, configMode = 1);
@@ -154,6 +159,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
     var channelDOM = $('<div></div>').addClass('channelObject');
     channelDOM.attr('ID', "channel" + channelID);
     channelDOM.attr('channelID', channelID);
+    channelDOM.attr('channelTYPE', channel.TYPE);
 
     var channelDescription = $('<h3></h3>').addClass('channelName');
     channelDescription.append(channel.NAME);
@@ -195,7 +201,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 
     }
 
-    var channelController = $('<div class="channelControllerContainer">').html(channelControllerDOM(channel))
+    var channelController = $('<div class="channelControllerContainer">').html(channelControllerDOM(channelID))
     channelDOM.append(channelController);
     // numberOfChannels += 1;
 
@@ -240,7 +246,7 @@ function createRGBElement(channelID, subchannel = 0, valueR = 0, valueG = 0, val
     return rgbSelectorElement
 }
 function createSwitchElement(channelID, subchannel = 1, value = 0, label = 'Output') {
-    var switchElement = $('<span>').addClass("custom-control custom-switch");
+    var switchElement = $('<span>').addClass("custom-control custom-switch channelSwitchContainer");
     if (value) {
         switchElement.append('<input type="checkbox" class="custom-control-input channelSwitch channelValue" id="channelSwitch' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" checked="true">');
         switchElement.append('<label class="custom-control-label" for="channelSwitch' + channelID + 's' + subchannel + '"subchannel="' + subchannel + '">' + label + ': ON</label>');
@@ -253,7 +259,8 @@ function createSwitchElement(channelID, subchannel = 1, value = 0, label = 'Outp
 }
 
 
-function channelControllerDOM(channel) {
+function channelControllerDOM(channelID) {
+    channel = channelConfigData[channelID];
     var channelType = channel.TYPE;
 
     var channelTypePanel = $('<span>').addClass('channelTypePanel');
@@ -288,27 +295,27 @@ function channelControllerDOM(channel) {
 
     switch (channelType) {
         case "ANALOG":
-            controllerDOM.append(createFaderElement(channelID, 1, 0));
+            controllerDOM.append(createFaderElement(channel.CHANNELID, 1, 0));
             break;
 
         case "SWITCH":
-            controllerDOM.append(createSwitchElement(channelID, 1, 0));
+            controllerDOM.append(createSwitchElement(channel.CHANNELID, 1, 0));
             break;
 
         case "RGB":
-            controllerDOM.append(createRGBElement(channelID, 1, 0, 0, 0));
+            controllerDOM.append(createRGBElement(channel.CHANNELID, 1, 0, 0, 0));
             break;
 
         case "DMXSWITCH":
-            controllerDOM.append(createSwitchElement(channelID, 1, 0));
+            controllerDOM.append(createSwitchElement(channel.CHANNELID, 1, 0));
             break;
 
         case "DMXANALOG":
-            controllerDOM.append(createFaderElement(channelID, 1, 0));
+            controllerDOM.append(createFaderElement(channel.CHANNELID, 1, 0));
             break;
 
         case "DMXRGB":
-            controllerDOM.append(createRGBElement(channelID, 1, 0, 0, 0));
+            controllerDOM.append(createRGBElement(channel.CHANNELID, 1, 0, 0, 0));
             break;
         case "EMPTY":
             controllerDOM.append("Select a channel type to define this channel");
@@ -375,36 +382,36 @@ function channelEditorDOM(channelID) {
     switch (channelType) {
         case "ANALOG":
 
-            editTable.append(createChannelEditField(channelID, 1, addressing[0]));
+            editTable.append(createChannelEditField(channelID, 1, addressing[1]));
             break;
 
         case "SWITCH":
-            editTable.append(createChannelEditField(channelID, 1, addressing[0]));
+            editTable.append(createChannelEditField(channelID, 1, addressing[1]));
             break;
 
         case "RGB":
-            editTable.append(createChannelEditField(channelID, 1, addressing[0], "Red Output"));
+            editTable.append(createChannelEditField(channelID, 1, addressing[1], "Red Output"));
             editTable.append('<BR>');
-            editTable.append(createChannelEditField(channelID, 2, addressing[1], "Green Output"));
+            editTable.append(createChannelEditField(channelID, 2, addressing[2], "Green Output"));
             editTable.append('<BR>');
-            editTable.append(createChannelEditField(channelID, 3, addressing[2], "Blue Output"));
+            editTable.append(createChannelEditField(channelID, 3, addressing[3], "Blue Output"));
             editTable.append('<BR>');
             break;
 
         case "DMXSWITCH":
-            editTable.append(createChannelEditField(channelID, 1, addressing[0]));
+            editTable.append(createChannelEditField(channelID, 1, addressing[1]));
             break;
 
         case "DMXANALOG":
-            editTable.append(createChannelEditField(channelID, 1, addressing[0]));
+            editTable.append(createChannelEditField(channelID, 1, addressing[1]));
             break;
 
         case "DMXRGB":
-            editTable.append(createChannelEditField(channelID, 1, addressing[0]));
-            editTable.append('<BR>');
             editTable.append(createChannelEditField(channelID, 1, addressing[1]));
             editTable.append('<BR>');
             editTable.append(createChannelEditField(channelID, 1, addressing[2]));
+            editTable.append('<BR>');
+            editTable.append(createChannelEditField(channelID, 1, addressing[3]));
             editTable.append('<BR>');
             break;
 
@@ -458,10 +465,11 @@ function saveChannelConfig(channelID, mode = "SAVE") {
 
 
 
-        updatedChannel["ADDRESSING"] = addressing.join('/');
+        updatedChannel["ADDRESSING"] = addressing.join(',');
         updatedChannel["CHMAPPING"] = "0";
         updatedChannel["NAME"] = $('.channelName[ajax_targetobjectid=' + channelID + '] .editableItemValue').html();
         updatedChannel["TYPE"] = $('.channelObject[channelid=' + channelID + '] .channelTypeSelector').val();
+        updatedChannel["CHANNELID"] = channelID;
     }
     else if (mode == "DELETE") {
         if (channelID == numberOfChannels) {
@@ -515,7 +523,7 @@ function buildChannelConfigJSON() {
 
 
     jsonDict = {}
-    jsonDict['CHANNELS'] = {}
+    jsonDict['CHANNELS'] = []
 
     for (i = 1; i <= Object.keys(channelConfigData).length; i++) {
 
@@ -523,7 +531,7 @@ function buildChannelConfigJSON() {
             continue
         }
         else {
-            jsonDict['CHANNELS'][i] = channelConfigData[i]
+            jsonDict['CHANNELS'].push(channelConfigData[i])
         }
 
     }
@@ -564,6 +572,7 @@ $(document).on('click', '.saveChannelConfigButton', function () {
     var channelID = $(this).parent().parent().parent().attr('channelID');
     $('.channelObject[channelid=' + channelID + '] .channelEditSwitch').prop('checked', false).trigger("change");
 
+    pushChannelConfigJSONtoNode();
     console.log('save button:', channelID);
 
 });
@@ -603,6 +612,18 @@ $(document).on('change', '.channelEditSwitch', function () {
 });
 
 
+$(document).on('change', '.channelValue', function () {
+    var channelID = $(this).attr('channelID');
+    console.log('value changed for channel', channelID, $(this));
+
+    newValue =
+
+
+        saveChannelConfig(channelID);
+    $('.channelObject[channelID=' + channelID + '] .channelControllerContainer').html(channelEditorDOM(channelID));
+    // $('.channelObject[channelID=' + channelID + '] .channelController').html(channelControllerDOM(channelID));
+
+});
 
 
 

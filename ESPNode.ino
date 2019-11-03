@@ -11,7 +11,7 @@
 #include <FS.h> // Include the SPIFFS library
 #include "espDMX.h"
 
-#define NUM_OF_CHANNELS 51
+#define NUM_OF_CHANNELS 10
 
 String buffer = "";
 
@@ -75,14 +75,10 @@ struct channel
 
 	unsigned short int fadeTime;
 	char fadeScratch[10];
-
-
 };
 
 //array of channels, not zero indexed
-struct channel channels[NUM_OF_CHANNELS];
-
-
+struct channel channels[(NUM_OF_CHANNELS + 1)];
 
 ///////////////////////////
 /////CONFIG FUNCTIONS//////
@@ -237,7 +233,7 @@ void saveChannelConfigJSON(String configBuffer)
 		Serial.println("config written");
 		// Serial.println("resetting node");
 		f.close();
-		loadChannelSetupJSONSettings(f);
+		initializeChannels();
 		// ESP.reset();
 	}
 }
@@ -387,13 +383,13 @@ void initChannelFromJSON(char *channelString)
 
 	Serial.println("ADDRESS IS:");
 	Serial.println(holder);
-	holder = strtok(holder, "/");
+	holder = strtok(holder, ",");
 	Serial.println(holder);
-	channels[channelID].CTRLAddress = atoi(strdup(holder));
+	channels[channelID].address1 = atoi(strdup(holder));
 	Serial.println(holder);
-	channels[channelID].address1 = atoi(strtok(NULL, "/"));
-	channels[channelID].address2 = atoi(strtok(NULL, "/"));
-	channels[channelID].address3 = atoi(strtok(NULL, "/"));
+	channels[channelID].address2 = atoi(strtok(NULL, ","));
+	channels[channelID].address3 = atoi(strtok(NULL, ","));
+	channels[channelID].CTRLAddress = atoi(strtok(NULL, ","));
 
 	Serial.println("SEGMENTS ARE:");
 	Serial.println(channels[channelID].CTRLAddress);
@@ -557,7 +553,7 @@ void sendChannelConfigJSON()
 
 	char charString[50];
 
-	for (int i = 1; i < 51; i++)
+	for (int i = 1; i <= NUM_OF_CHANNELS; i++)
 	{
 		// Serial.print("working on channel");
 		// Serial.println(i);
@@ -585,15 +581,15 @@ void sendChannelConfigJSON()
 		snprintf(charString, 30, "\"NAME\":\"%s\",", channels[i].name);
 		strcat(bufferB, charString);
 
-		Serial.println("parsing ch type");
-		Serial.println(channels[i].type);
+		// Serial.println("parsing ch type");
+		// Serial.println(channels[i].type);
 		snprintf(charString, 50, "\"TYPE\":\"%s\",", channels[i].type);
 		strcat(bufferB, charString);
 
 		snprintf(charString, 50, "\"CHMAPPING\":\"%s\",", channels[i].chmapping);
 		strcat(bufferB, charString);
 
-		snprintf(charString, 50, "\"ADDRESSING\":\"%i;%i;%i;%i\"}", channels[i].CTRLAddress, channels[i].address1, channels[i].address2, channels[i].address3);
+		snprintf(charString, 50, "\"ADDRESSING\":\"%i,%i,%i,%i\"}", channels[i].CTRLAddress, channels[i].address1, channels[i].address2, channels[i].address3);
 		strcat(bufferB, charString);
 
 		server.sendContent(bufferB);
@@ -622,7 +618,6 @@ void saveChannelSetupJSON(String buffer)
 	}
 }
 
-
 // void parseChannelValueUpdates(){
 // 	StaticJsonDocument<512> channelStatusJSON;
 
@@ -633,57 +628,84 @@ void saveChannelSetupJSON(String buffer)
 // 		Serial.println(error.c_str());
 // 		return;
 
-
 // 	channelStatusJSON.clear();
 
-
 // }
-
-
-
 
 ///CHANNEL STATUS
 void sendChannelStatusJSON()
 {
-	StaticJsonDocument<5000> channelStatusJSON;
+
+	StaticJsonDocument<100> channelStatusJSON;
+	String jsonString;
+
+	jsonString = "{\"CHANNELS\":[";
+
+	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	server.send(200, "text / html", jsonString);
 
 	for (int i = 1; i <= NUM_OF_CHANNELS; i++)
 	{
-		JsonObject chStatus = channelStatusJSON.createNestedObject();
-		chStatus["CHANNELID"]=i;
-		chStatus["valA"]=channels[i].address1Value;
-		chStatus["valB"]=channels[i].address2Value;
-		chStatus["valC"]=channels[i].address3Value;
+		Serial.println(i);
+		jsonString = "";
+		channelStatusJSON["CHANNELID"] = i;
+		channelStatusJSON["valA"] = channels[i].address1Value;
+		channelStatusJSON["valB"] = channels[i].address2Value;
+		channelStatusJSON["valC"] = channels[i].address3Value;
+		serializeJsonPretty(channelStatusJSON, jsonString);
+		channelStatusJSON.clear();
+		server.sendContent(jsonString);
+		// Serial.println(jsonString);
+		if (i != NUM_OF_CHANNELS)
+		{
+			server.sendContent(",");
+		}
 	}
+	Serial.println("Asfasfasf");
 
+	server.sendContent("]}");
+	Serial.println("sssssssff");
+	server.sendContent("");
+	// server.stop();
+	Serial.println("sggbbbbsgsff");
 
-	
-	String json;
+	Serial.println("ch status summary sent");
 	// sendChannelStatusJSON.printTo(json);upp
 
+	// Serial.println('gggga');
 
-  	serializeJsonPretty(channelStatusJSON, json);
-	Serial.println(json);
+	// Serial.println(json);
 
-	server.setContentLength(measureJsonPretty(channelStatusJSON));
-	server.send(200, "application/json",json);
+	// Serial.println('a');
+	// server.setContentLength(measureJsonPretty(channelStatusJSON));
+	// Serial.println('B');
+
+	// // server.send(200, "application/json", json);
+	// // server.send(200, "text/plain", "this works as well");
+	// // server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	// server.send(200, "text/html", "");
+
+	// Serial.println("Ddasfsd");
+	// server.sendContent(json);
+	// Serial.println("Ddd");
 	// server.sendContent("");
 
+	// // serializeJson(doc, Serial);
+	// // server.println(F("HTTP/1.0 200 OK"));
+	// // server.println(F("Content-Type: application/json"));
+	// // server.println(F("Connection: close"));
+	// // server.print(F("Content-Length: "));
+	// // server.println(measureJsonPretty(channelStatusJSON));
+	// // server.println();
 
-// serializeJson(doc, Serial);
-	// server.println(F("HTTP/1.0 200 OK"));
-	// server.println(F("Content-Type: application/json"));
-	// server.println(F("Connection: close"));
-	// server.print(F("Content-Length: "));
-	// server.println(measureJsonPretty(channelStatusJSON));
-	// server.println();
+	// // Write JSON document
+	// // serializeJsonPretty(channelStatusJSON, server);
 
-	// Write JSON document
-	// serializeJsonPretty(channelStatusJSON, server);
-
-	// Disconnect
-	server.stop();
-	channelStatusJSON.clear();
+	// // Disconnect
+	// server.stop();
+	// Serial.println("wqwe");
+	// channelStatusJSON.clear();
+	// Serial.println("ddfsf");
 }
 
 void saveChannelDefaultsJSON(String buffer)
@@ -727,7 +749,7 @@ void setupWebServer(bool configMode)
 		});
 	}
 
-	server.on("/CFG", HTTP_ANY, handleWEBConfig); // Call the 'handleLED'
+	server.on("/CFG", HTTP_ANY, handleWEBConfig);  // Call the 'handleLED'
 	server.on("/UPD", HTTP_ANY, handleWEBUpdates); // Call the 'handleLED'
 
 	server.onNotFound([&]() { // If the client requests any URI
@@ -793,7 +815,6 @@ void handleWEBUpdates()
 		buffer = server.argName(0);
 		Serial.println("inputis");
 		Serial.println(buffer);
-
 	}
 	else if (server.method() == HTTP_GET)
 	{
@@ -806,14 +827,13 @@ void handleWEBUpdates()
 			Serial.println("get CH Status");
 			sendChannelStatusJSON();
 		}
-
 	}
 	else
 	{
 		Serial.println("OTHER METHOD");
 	}
 	delay(25);
-	Serial.println("end of web config");
+	Serial.println("end of web updates");
 }
 void handleWEBConfig()
 {
@@ -948,6 +968,31 @@ void updateLiferaft(char param, char value)
 	f.close();
 }
 
+void initializeChannels()
+{
+	File f = SPIFFS.open("/channelSetup.dat", "r");
+	Serial.println("channel file open");
+
+	if (!f)
+	{
+		Serial.println("file open failed, create empty file");
+		f.close();
+		f = SPIFFS.open("/channelSetup.dat", "w+");
+		f.print("");
+		f.close();
+		loadChannelSetupJSONSettings(f);
+	}
+	else
+	{
+		Serial.println("====== Reading channel settings from SPIFFS file =======");
+		// Serial.println("File Content:");
+
+		//process config file
+		loadChannelSetupJSONSettings(f);
+		f.close();
+	}
+}
+
 ///////////////////////////
 /////ESP FUNCTIONS//////
 ///////////////////////////
@@ -1045,27 +1090,7 @@ void setup()
 	// 	updateLiferaft('C', corruptionCheck + 1);
 	// }
 
-	f = SPIFFS.open("/channelSetup.dat", "r");
-	Serial.println("channel file open");
-
-	if (!f)
-	{
-		Serial.println("file open failed, create empty file");
-		f.close();
-		f = SPIFFS.open("/channelSetup.dat", "w+");
-		f.print("");
-		f.close();
-		loadChannelSetupJSONSettings(f);
-	}
-	else
-	{
-		Serial.println("====== Reading channel settings from SPIFFS file =======");
-		// Serial.println("File Content:");
-
-		//process config file
-		loadChannelSetupJSONSettings(f);
-		f.close();
-	}
+	initializeChannels();
 	// updateLiferaft('C', '0');
 	Serial.println("load completed");
 }
