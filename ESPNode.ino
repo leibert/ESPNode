@@ -30,6 +30,11 @@ char IOSResources[] = "DEFioshit.net";
 //variables for WIFI
 bool validWIFI = false;
 
+//DMX
+DMXESPSerial dmx;
+bool DMXpresent = false;
+String DMXCTRLChs = "";
+
 //setup for softAP if needed
 const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 1, 1);
@@ -79,9 +84,18 @@ struct channel
 
 //array of channels, not zero indexed
 struct channel channels[(NUM_OF_CHANNELS + 1)];
-
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
 ///////////////////////////
 /////CONFIG FUNCTIONS//////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
 ///////////////////////////
 
 //read config file
@@ -220,6 +234,16 @@ void saveConfigJSON(String configBuffer)
 	}
 }
 
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+/////CH SETUP FUNCTIONS//////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
 void saveChannelConfigJSON(String configBuffer)
 {
 	File f = SPIFFS.open("/channelSetup.dat", "w+");
@@ -237,9 +261,6 @@ void saveChannelConfigJSON(String configBuffer)
 		// ESP.reset();
 	}
 }
-///////////////////////////
-/////CH SETUP FUNCTIONS//////
-///////////////////////////
 
 //read ChannelSetup file
 void loadChannelSetupJSONSettings(File f)
@@ -368,11 +389,6 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(holder);
 	strncpy(channels[channelID].name, holder, 30);
 
-	//COPY CHANNEL TYPE FROM CONFIG JSON
-	holder = strdup(channelJSON["TYPE"]);
-	Serial.println(holder);
-	strncpy(channels[channelID].type, channelJSON["TYPE"], 10);
-
 	//SET CHANNEL MAPPING
 	strncpy(channels[channelID].chmapping, channelJSON["CHMAPPING"], 2);
 
@@ -401,6 +417,21 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(channelJSON["ADDRESSING"].as<char *>());
 
 	Serial.println("ch parse done");
+
+	//COPY CHANNEL TYPE FROM CONFIG JSON
+	holder = strdup(channelJSON["TYPE"]);
+	Serial.println(holder);
+	//Check if it's a dmx channel
+	Serial.println(strstr(channelJSON["TYPE"], "DMX"));
+
+	if (strstr(channelJSON["TYPE"], "DMX"))
+	{
+		Serial.println("DMX CHANNEL IS PRESENT");
+		DMXpresent = true;
+		DMXCTRLChs += (String(channelID) + ",");
+	}
+	strncpy(channels[channelID].type, channelJSON["TYPE"], 10);
+
 	channelJSON.clear();
 }
 
@@ -617,26 +648,78 @@ void saveChannelSetupJSON(String buffer)
 		ESP.reset();
 	}
 }
+void initializeChannels()
+{
+	///ensure clean node state
+	DMXpresent = false;
 
-// void parseChannelValueUpdates(){
-// 	StaticJsonDocument<512> channelStatusJSON;
+	File f = SPIFFS.open("/channelSetup.dat", "r");
+	Serial.println("channel file open");
 
-// 	// Parse JSON object
-// 	DeserializationError error = deserializeJson(doc, client);
-// 	if (error) {
-// 		Serial.print(F("deserializeJson() failed: "));
-// 		Serial.println(error.c_str());
-// 		return;
+	if (!f)
+	{
+		Serial.println("file open failed, create empty file");
+		f.close();
+		f = SPIFFS.open("/channelSetup.dat", "w+");
+		f.print("");
+		f.close();
+		loadChannelSetupJSONSettings(f);
+	}
+	else
+	{
+		Serial.println("====== Reading channel settings from SPIFFS file =======");
+		// Serial.println("File Content:");
 
-// 	channelStatusJSON.clear();
+		//process config file
+		loadChannelSetupJSONSettings(f);
+		f.close();
+	}
 
-// }
+	if (DMXpresent)
+	{
+		Serial.println("DMX Present");
+		// Serial.end();
+		dmx.init();
+	}
+	else
+	{
+		Serial.println("NO DMX");
+		dmx.end();
+	}
+}
 
-///CHANNEL STATUS
-void sendChannelStatusJSON()
+////////////////
+////////////////
+////////////////
+////////////////
+////////////////
+////CHANNEL VALUES
+////////////////
+////////////////
+////////////////
+////////////////
+
+String getChannelStatusJSON(int channelID)
 {
 
 	StaticJsonDocument<100> channelStatusJSON;
+	String jsonString;
+	jsonString = "";
+	channelStatusJSON["CHANNELID"] = channelID;
+	channelStatusJSON["CTRLValue"] = channels[channelID].CTRLValue;
+	channelStatusJSON["AValue"] = channels[channelID].address1Value;
+	channelStatusJSON["BValue"] = channels[channelID].address2Value;
+	channelStatusJSON["CValue"] = channels[channelID].address3Value;
+
+	serializeJsonPretty(channelStatusJSON, jsonString);
+	channelStatusJSON.clear();
+	return jsonString;
+}
+
+///CHANNEL STATUS
+void sendAllChannelStatusJSON()
+{
+
 	String jsonString;
 
 	jsonString = "{\"CHANNELS\":[";
@@ -646,15 +729,7 @@ void sendChannelStatusJSON()
 
 	for (int i = 1; i <= NUM_OF_CHANNELS; i++)
 	{
-		Serial.println(i);
-		jsonString = "";
-		channelStatusJSON["CHANNELID"] = i;
-		channelStatusJSON["valA"] = channels[i].address1Value;
-		channelStatusJSON["valB"] = channels[i].address2Value;
-		channelStatusJSON["valC"] = channels[i].address3Value;
-		serializeJsonPretty(channelStatusJSON, jsonString);
-		channelStatusJSON.clear();
-		server.sendContent(jsonString);
+		server.sendContent(getChannelStatusJSON(i));
 		// Serial.println(jsonString);
 		if (i != NUM_OF_CHANNELS)
 		{
@@ -670,42 +745,6 @@ void sendChannelStatusJSON()
 	Serial.println("sggbbbbsgsff");
 
 	Serial.println("ch status summary sent");
-	// sendChannelStatusJSON.printTo(json);upp
-
-	// Serial.println('gggga');
-
-	// Serial.println(json);
-
-	// Serial.println('a');
-	// server.setContentLength(measureJsonPretty(channelStatusJSON));
-	// Serial.println('B');
-
-	// // server.send(200, "application/json", json);
-	// // server.send(200, "text/plain", "this works as well");
-	// // server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-	// server.send(200, "text/html", "");
-
-	// Serial.println("Ddasfsd");
-	// server.sendContent(json);
-	// Serial.println("Ddd");
-	// server.sendContent("");
-
-	// // serializeJson(doc, Serial);
-	// // server.println(F("HTTP/1.0 200 OK"));
-	// // server.println(F("Content-Type: application/json"));
-	// // server.println(F("Connection: close"));
-	// // server.print(F("Content-Length: "));
-	// // server.println(measureJsonPretty(channelStatusJSON));
-	// // server.println();
-
-	// // Write JSON document
-	// // serializeJsonPretty(channelStatusJSON, server);
-
-	// // Disconnect
-	// server.stop();
-	// Serial.println("wqwe");
-	// channelStatusJSON.clear();
-	// Serial.println("ddfsf");
 }
 
 void saveChannelDefaultsJSON(String buffer)
@@ -725,8 +764,154 @@ void saveChannelDefaultsJSON(String buffer)
 	}
 }
 
+void processChannelUpdates(String updateBuffer)
+{
+	int updateEndPos;
+	String channelUpdate;
+
+	//cut off header
+	updateBuffer = updateBuffer.substring((updateBuffer.indexOf('[') + 1));
+
+	updateBuffer = updateBuffer.substring(0, updateBuffer.lastIndexOf('}'));
+
+	updateBuffer = updateBuffer.substring(0, updateBuffer.lastIndexOf(']'));
+
+	while (updateBuffer.length() > 2)
+	{
+		// Serial.println(updateBuffer.length());
+		// Serial.println("Read char$");
+		// Serial.println(channelDefinition);
+		// Serial.println(updateBuffer[0]);
+		switch (updateBuffer[0])
+		{
+		//start of channel dict
+		case '[':
+			break;
+		//end of channel dict, kick out of this loop
+		case ']':
+			continue;
+			break;
+		//start of Channel Defintion, initialize on it
+		case '{':
+
+			channelUpdate = updateBuffer.substring(0, (updateBuffer.indexOf('}') + 1));
+
+			updateChannelfromJSON(channelUpdate);
+			break;
+		//end of Channel Defintion, ignor look for next one
+		case '}':
+			break;
+		default:
+			break;
+		}
+		updateBuffer = updateBuffer.substring(1);
+	}
+}
+
+void updateChannelfromJSON(String channelUpdate)
+{
+
+	Serial.println("parsing updates");
+	Serial.println(channelUpdate);
+
+	StaticJsonDocument<512> channelUpdateJSON;
+	char *holder;
+
+	// Deserialize the JSON document
+	DeserializationError error = deserializeJson(channelUpdateJSON, channelUpdate);
+
+	// Test if parsing succeeds.
+	if (error)
+	{
+		Serial.print(F("deserializeJson() failed: "));
+		Serial.println(error.c_str());
+		return;
+	}
+
+	//GET CHANNEL ID
+	int channelID = channelUpdateJSON["channelID"];
+	Serial.println("channel ID is:");
+	Serial.println(channelID);
+
+	Serial.println("CTRLValue");
+	Serial.println(channelUpdateJSON["CTRLValue"].as<char *>());
+	channels[channelID].CTRLValue = channelUpdateJSON["CTRLValue"];
+
+	channels[channelID].address1Value = channelUpdateJSON["AValue"];
+	Serial.println("saved value");
+	Serial.println(channels[channelID].address1Value);
+
+	channels[channelID].address2Value = channelUpdateJSON["BValue"];
+
+	channels[channelID].address3Value = channelUpdateJSON["CValue"];
+
+	Serial.println("ch parse done");
+	channelUpdateJSON.clear();
+}
+
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+/////DMX FUNCTIONS//////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+///////////////////////////
+
+void DMXmaintenance()
+{
+	Serial.println("Control Channel Maintenance");
+	Serial.println(DMXCTRLChs);
+	String MaintainDMXCTRLChs = DMXCTRLChs;
+	while (MaintainDMXCTRLChs.length() > 0)
+	{
+		// Serial.println(MaintainDMXCTRLChs);
+		int CC = MaintainDMXCTRLChs.substring(0, MaintainDMXCTRLChs.indexOf(","))
+					 .toInt();
+		// Serial.println(DMXCTRLChs.indexOf("," + 1));
+		MaintainDMXCTRLChs =
+			MaintainDMXCTRLChs.substring((MaintainDMXCTRLChs.indexOf(",") + 1));
+		Serial.println("A DMX CH is " + String(CC));
+
+		Serial.println(channels[CC].CTRLAddress);
+		Serial.println(channels[CC].address1);
+		Serial.println(channels[CC].address2);
+		Serial.println(channels[CC].address3);
+
+		// Serial.println(MaintainDMXCTRLChs);
+		if (channels[CC].CTRLAddress > 0)
+			dmx.write(channels[CC].CTRLAddress, channels[CC].CTRLValue);
+		if (channels[CC].address1 > 0)
+			dmx.write(channels[CC].address1, channels[CC].address1Value);
+		if (channels[CC].address2 > 0)
+			dmx.write(channels[CC].address2, channels[CC].address2Value);
+		if (channels[CC].address3 > 0)
+			dmx.write(channels[CC].address3, channels[CC].address3Value);
+	}
+	// Update DMX Universe
+	dmx.update();
+	// delay(20);
+}
+void DMXtest()
+{
+
+	dmx.write(1, 0);
+	dmx.write(2, 200);
+	dmx.write(3, 0);
+	// Update DMX Universe
+	dmx.update();
+	delay(300);
+}
+
+///////////////////////////
+///////////////////////////
+///////////////////////////
 ///////////////////////////
 /////WEB SERVER FUNCTIONS//////
+///////////////////////////
+///////////////////////////
+///////////////////////////
 ///////////////////////////
 
 void setupWebServer(bool configMode)
@@ -802,19 +987,24 @@ void handleWEBUpdates()
 {
 	Serial.println("in handle WEB updates");
 	Serial.println("recieved ARGS are");
-	// for (int i = 0; i < server.args(); i++)
-	// {
+	for (int i = 0; i < server.args(); i++)
+	{
 
-	// 	Serial.print(server.argName(i));
-	// 	Serial.println(server.arg(i));up
-	// }
+		Serial.print(server.argName(i));
+		Serial.println(server.arg(i));
+	}
 
 	if (server.method() == HTTP_POST)
 	{
 		Serial.println("updates POST");
-		buffer = server.argName(0);
+		buffer = server.arg("plain");
 		Serial.println("inputis");
 		Serial.println(buffer);
+		if (buffer.startsWith("{\"channelUpdates\":"))
+		{
+			Serial.println("recieving channel updates");
+			processChannelUpdates(buffer);
+		}
 	}
 	else if (server.method() == HTTP_GET)
 	{
@@ -825,7 +1015,7 @@ void handleWEBUpdates()
 		if (server.args() && server.argName(0) == "getCHStatus")
 		{
 			Serial.println("get CH Status");
-			sendChannelStatusJSON();
+			sendAllChannelStatusJSON();
 		}
 	}
 	else
@@ -835,6 +1025,7 @@ void handleWEBUpdates()
 	delay(25);
 	Serial.println("end of web updates");
 }
+
 void handleWEBConfig()
 {
 	Serial.println("in handle WEB config");
@@ -968,38 +1159,13 @@ void updateLiferaft(char param, char value)
 	f.close();
 }
 
-void initializeChannels()
-{
-	File f = SPIFFS.open("/channelSetup.dat", "r");
-	Serial.println("channel file open");
-
-	if (!f)
-	{
-		Serial.println("file open failed, create empty file");
-		f.close();
-		f = SPIFFS.open("/channelSetup.dat", "w+");
-		f.print("");
-		f.close();
-		loadChannelSetupJSONSettings(f);
-	}
-	else
-	{
-		Serial.println("====== Reading channel settings from SPIFFS file =======");
-		// Serial.println("File Content:");
-
-		//process config file
-		loadChannelSetupJSONSettings(f);
-		f.close();
-	}
-}
-
 ///////////////////////////
 /////ESP FUNCTIONS//////
 ///////////////////////////
 
 void setup()
 {
-	Serial.begin(115200); // Start the Serial communication to send messages to the computer
+	// Serial.begin(250000); // Start the Serial communication to send messages to the computer
 	delay(10);
 	Serial.println('\n');
 
@@ -1097,6 +1263,10 @@ void setup()
 
 void loop(void)
 {
+	if (DMXpresent) //helps to slow down to avoid overwhelming DMX devices
+		DMXmaintenance();
+	// DMXtest();
+
 	if (!validWIFI)
 	{
 		// Serial.println("BBBBDDDDD");
@@ -1104,5 +1274,5 @@ void loop(void)
 	}
 	// Serial.println("333AAA");
 	server.handleClient();
-	delay(20);
+	delay(10);
 }

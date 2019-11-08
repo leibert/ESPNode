@@ -97,7 +97,7 @@ function loadChannelsPanel(configMode = false) {
         // channelValueData = JSON.parse(testCHValues);
         console.log("channel values", channelValueData);
 
-        jQuery.each(channelValueData, function (index, channelValue) {
+        jQuery.each(channelValueData.CHANNELS, function (index, channelValue) {
             updateChannelValues(channelValue);
         });
 
@@ -105,9 +105,8 @@ function loadChannelsPanel(configMode = false) {
 }
 
 function updateChannelValues(channelData) {
-
     console.log("processing channel value update", channelData);
-    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue').val(channelData.VALA);
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue').val(channelData.AValue);
     $('.channelObject[channelID=2] .channelValue[subchannel=1]').prop('checked', true)
 
 
@@ -235,7 +234,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 function createFaderElement(channelID, subchannel = 1, value = 0, label = 'Output') {
     var faderElement = $('<span>').addClass("channelFaderContainer");;
     faderElement.append($('<label for="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '">' + label + ': ' + value + '</label>'));
-    faderElement.append($('<input type="range" class="custom-range channelFader channelValue" id="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + value + '">'));
+    faderElement.append($('<input type="range" class="custom-range channelFader channelValue" max="255" id="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + value + '">'));
     return faderElement
 }
 function createRGBElement(channelID, subchannel = 0, valueR = 0, valueG = 0, valueB = 0, label = '') {
@@ -613,19 +612,54 @@ $(document).on('change', '.channelEditSwitch', function () {
 
 
 $(document).on('change', '.channelValue', function () {
-    var channelID = $(this).attr('channelID');
+    var channelID = $(this).closest('.channelObject').attr('channelID')
+    var subchannel = $(this).attr('subchannel');
     console.log('value changed for channel', channelID, $(this));
 
-    newValue =
+    pushChannelValues(channelID);
 
 
-        saveChannelConfig(channelID);
-    $('.channelObject[channelID=' + channelID + '] .channelControllerContainer').html(channelEditorDOM(channelID));
+    // saveChannelConfig(channelID);
+    // $('.channelObject[channelID=' + channelID + '] .channelControllerContainer').html(channelEditorDOM(channelID));
     // $('.channelObject[channelID=' + channelID + '] .channelController').html(channelControllerDOM(channelID));
 
 });
 
 
+function getInputValue(channelID, subchannel) {
+    //attempt to grab a switch or slider value
+    value = $('.channelObject[channelID=' + channelID + '] .channelValue[subchannel=' + subchannel + ']').prop('checked') | $('.channelObject[channelID=' + channelID + '] .channelValue[subchannel=' + subchannel + ']').val();
+
+    if (value == true) {
+        value = 100;
+    }
+    else if (value == false) {
+        value = 0;
+    }
+    else if (value === undefined) {
+        value = 0;
+    }
+    return value;
+}
+
+function pushChannelValues(channelID) {
+    channelValues = {};
+    channelValues['channelID'] = channelID;
+    channelValues['CTRLValue'] = "0";
+    channelValues['AValue'] = getInputValue(channelID, 1);
+    channelValues['BValue'] = getInputValue(channelID, 2);
+    channelValues['CValue'] = getInputValue(channelID, 3);
+
+    channelUpdates = {};
+    channelUpdates['channelUpdates'] = [];
+    channelUpdates['channelUpdates'].push(channelValues);
+
+
+
+    ajax = $.post(statusEndpoint, JSON.stringify(channelUpdates));
+
+
+}
 
 
 

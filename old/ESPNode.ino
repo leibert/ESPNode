@@ -28,6 +28,18 @@ String IOSResources = "ioshit.net";
 const byte numChannels = 128;
 byte numActiveChannels = 0;
 
+bool DMXpresent = false;
+String DMXCTRLChs = "";
+
+///
+///
+///
+///
+///
+///
+///
+///
+
 // // setup timeout clock
 // int MCLKmsec, MCLKsec, MCLKminutes, MCLKhours;
 // int TMRmsec, TMRsec, TMRminutes, TMRhours;

@@ -6,7 +6,15 @@
 	],
 	"settings": {
 		"files.associations": {
-			"cstring": "cpp"
+			"cstring": "cpp",
+			"*.tcc": "cpp",
+			"string": "cpp",
+			"unordered_map": "cpp",
+			"iosfwd": "cpp",
+			"xhash": "cpp",
+			"xstring": "cpp",
+			"xtree": "cpp",
+			"xutility": "cpp"
 		}
 	}
 }
