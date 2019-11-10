@@ -874,20 +874,20 @@ void DMXmaintenance()
 			MaintainDMXCTRLChs.substring((MaintainDMXCTRLChs.indexOf(",") + 1));
 		Serial.println("A DMX CH is " + String(CC));
 
-		Serial.println(channels[CC].CTRLAddress);
-		Serial.println(channels[CC].address1);
-		Serial.println(channels[CC].address2);
-		Serial.println(channels[CC].address3);
+		// Serial.println(channels[CC].CTRLAddress);
+		// Serial.println(channels[CC].address1);
+		// Serial.println(channels[CC].address2);
+		// Serial.println(channels[CC].address3);
 
 		// Serial.println(MaintainDMXCTRLChs);
 		if (channels[CC].CTRLAddress > 0)
-			dmx.write(channels[CC].CTRLAddress, channels[CC].CTRLValue);
+			dmx.write(channels[CC].CTRLAddress, ((channels[CC].CTRLValue / 100) * 256));
 		if (channels[CC].address1 > 0)
-			dmx.write(channels[CC].address1, channels[CC].address1Value);
+			dmx.write(channels[CC].address1, ((channels[CC].address1Value / 100) * 256));
 		if (channels[CC].address2 > 0)
-			dmx.write(channels[CC].address2, channels[CC].address2Value);
+			dmx.write(channels[CC].address2, ((channels[CC].address2Value / 100) * 256));
 		if (channels[CC].address3 > 0)
-			dmx.write(channels[CC].address3, channels[CC].address3Value);
+			dmx.write(channels[CC].address3, ((channels[CC].address3Value / 100) * 256));
 	}
 	// Update DMX Universe
 	dmx.update();
@@ -1004,6 +1004,7 @@ void handleWEBUpdates()
 		{
 			Serial.println("recieving channel updates");
 			processChannelUpdates(buffer);
+			sendAllChannelStatusJSON();
 		}
 	}
 	else if (server.method() == HTTP_GET)

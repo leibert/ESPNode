@@ -106,8 +106,12 @@ function loadChannelsPanel(configMode = false) {
 
 function updateChannelValues(channelData) {
     console.log("processing channel value update", channelData);
-    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue').val(channelData.AValue);
-    $('.channelObject[channelID=2] .channelValue[subchannel=1]').prop('checked', true)
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=1]').val(channelData.AValue);
+    // if ()
+    //     $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=1]').prop('checked', true)
+
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=2]').val(channelData.BValue);
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=3]').val(channelData.CValue);
 
 
 
@@ -234,14 +238,14 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 function createFaderElement(channelID, subchannel = 1, value = 0, label = 'Output') {
     var faderElement = $('<span>').addClass("channelFaderContainer");;
     faderElement.append($('<label for="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '">' + label + ': ' + value + '</label>'));
-    faderElement.append($('<input type="range" class="custom-range channelFader channelValue" max="255" id="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + value + '">'));
+    faderElement.append($('<input type="range" class="custom-range channelFader channelValue" max="100" id="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + value + '">'));
     return faderElement
 }
 function createRGBElement(channelID, subchannel = 0, valueR = 0, valueG = 0, valueB = 0, label = '') {
     var rgbSelectorElement = $('<span>').addClass("channelRGBContainer");;
-    rgbSelectorElement.append(createFaderElement(channelID, (subchannel + 1), valueR, 'Red'));
-    rgbSelectorElement.append(createFaderElement(channelID, (subchannel + 2), valueG, 'Green'));
-    rgbSelectorElement.append(createFaderElement(channelID, (subchannel + 3), valueB, 'Blue'));
+    rgbSelectorElement.append(createFaderElement(channelID, 1, valueR, 'Red'));
+    rgbSelectorElement.append(createFaderElement(channelID, 2, valueG, 'Green'));
+    rgbSelectorElement.append(createFaderElement(channelID, 3, valueB, 'Blue'));
     return rgbSelectorElement
 }
 function createSwitchElement(channelID, subchannel = 1, value = 0, label = 'Output') {
@@ -406,11 +410,11 @@ function channelEditorDOM(channelID) {
             break;
 
         case "DMXRGB":
-            editTable.append(createChannelEditField(channelID, 1, addressing[1]));
+            editTable.append(createChannelEditField(channelID, 1, addressing[1], "Red Output"));
             editTable.append('<BR>');
-            editTable.append(createChannelEditField(channelID, 1, addressing[2]));
+            editTable.append(createChannelEditField(channelID, 2, addressing[2], "Green Output"));
             editTable.append('<BR>');
-            editTable.append(createChannelEditField(channelID, 1, addressing[3]));
+            editTable.append(createChannelEditField(channelID, 3, addressing[3], "Blue Output"));
             editTable.append('<BR>');
             break;
 
@@ -639,6 +643,7 @@ function getInputValue(channelID, subchannel) {
     else if (value === undefined) {
         value = 0;
     }
+
     return value;
 }
 
@@ -660,6 +665,8 @@ function pushChannelValues(channelID) {
 
 
 }
+
+
 
 
 
