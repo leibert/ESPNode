@@ -107,11 +107,14 @@ function loadChannelsPanel(configMode = false) {
 function updateChannelValues(channelData) {
     console.log("processing channel value update", channelData);
     $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=1]').val(channelData.AValue);
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValueText[subchannel=1]').val(channelData.AValue);
     // if ()
     //     $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=1]').prop('checked', true)
 
     $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=2]').val(channelData.BValue);
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValueText[subchannel=2]').val(channelData.BValue);
     $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValue[subchannel=3]').val(channelData.CValue);
+    $('.channelObject[channelID=' + channelData.CHANNELID + '] .channelValueText[subchannel=3]').val(channelData.CValue);
 
 
 
@@ -237,7 +240,7 @@ function addChannelPanel(channelID, channel, configMode = false, showValue = fal
 
 function createFaderElement(channelID, subchannel = 1, value = 0, label = 'Output') {
     var faderElement = $('<span>').addClass("channelFaderContainer");;
-    faderElement.append($('<label for="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '">' + label + ': ' + value + '</label>'));
+    faderElement.append($('<label for="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '">' + label + ': <span class="channelValueText" subchannel="' + subchannel + '">' + value + '</span></label>'));
     faderElement.append($('<input type="range" class="custom-range channelFader channelValue" max="100" id="channelFader' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + value + '">'));
     return faderElement
 }

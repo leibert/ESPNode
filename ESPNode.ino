@@ -678,7 +678,7 @@ void initializeChannels()
 	if (DMXpresent)
 	{
 		Serial.println("DMX Present");
-		// Serial.end();
+		Serial.end();
 		dmx.init();
 	}
 	else
@@ -872,26 +872,38 @@ void DMXmaintenance()
 		// Serial.println(DMXCTRLChs.indexOf("," + 1));
 		MaintainDMXCTRLChs =
 			MaintainDMXCTRLChs.substring((MaintainDMXCTRLChs.indexOf(",") + 1));
-		Serial.println("A DMX CH is " + String(CC));
+		// Serial.println("A DMX CH is " + String(CC));
 
+		// Serial.println("channels");
 		// Serial.println(channels[CC].CTRLAddress);
 		// Serial.println(channels[CC].address1);
 		// Serial.println(channels[CC].address2);
 		// Serial.println(channels[CC].address3);
 
-		// Serial.println(MaintainDMXCTRLChs);
+		// Serial.println("value");
+		// Serial.println(channels[CC].CTRLValue);
+		// Serial.println(channels[CC].address1Value);
+		// Serial.println(channels[CC].address2Value);
+		// Serial.println(channels[CC].address3Value);
+
+		// Serial.println("OUTPUTS");
 		if (channels[CC].CTRLAddress > 0)
-			dmx.write(channels[CC].CTRLAddress, ((channels[CC].CTRLValue / 100) * 256));
+			dmx.write(channels[CC].CTRLAddress, (int)((channels[CC].CTRLValue / 100.0) * 255));
+
+		// Serial.println((int)((channels[CC].CTRLValue / 100.0) * 255));
 		if (channels[CC].address1 > 0)
-			dmx.write(channels[CC].address1, ((channels[CC].address1Value / 100) * 256));
+			dmx.write(channels[CC].address1, (int)((channels[CC].address1Value / 100.0) * 255));
+		// Serial.println((int)((channels[CC].address1Value / 100.0) * 255));
 		if (channels[CC].address2 > 0)
-			dmx.write(channels[CC].address2, ((channels[CC].address2Value / 100) * 256));
+			dmx.write(channels[CC].address2, (int)((channels[CC].address2Value / 100.0) * 255));
+		// Serial.println((int)((channels[CC].address2Value / 100.0) * 255));
 		if (channels[CC].address3 > 0)
-			dmx.write(channels[CC].address3, ((channels[CC].address3Value / 100) * 256));
+			dmx.write(channels[CC].address3, (int)((channels[CC].address3Value / 100.0) * 255));
+		// Serial.println((int)((channels[CC].address3Value / 100.0) * 255));
 	}
 	// Update DMX Universe
 	dmx.update();
-	// delay(20);
+	delay(10);
 }
 void DMXtest()
 {
