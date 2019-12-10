@@ -45,11 +45,15 @@ ESP8266WebServer server(80);			// Create a webserver object that listens for HTT
 String getContentType(String filename); // convert the file extension to the MIME type
 bool handleFileRead(String path);		// send the right file to the client (if it exists)
 
+unsigned long lastFadeMaintain = millis();
+
 //CHANNEL struct
 struct channel
 {
 	//Channel name
 	char name[30];
+
+	bool inverted;
 
 	//Channel type
 	//0=UNSET
@@ -385,9 +389,16 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(channelID);
 
 	//COPY CHANNEL NAME FROM CONFIG JSON
-	holder = strdup(channelJSON["NAME"]);
-	Serial.println(holder);
-	strncpy(channels[channelID].name, holder, 30);
+	if (channelJSON["NAME"])
+	{
+		holder = strdup(channelJSON["NAME"]);
+		Serial.println(holder);
+		strncpy(channels[channelID].name, holder, 30);
+	}
+	else
+	{
+		strncpy(channels[channelID].name, "", 1);
+	}
 
 	//SET CHANNEL MAPPING
 	strncpy(channels[channelID].chmapping, channelJSON["CHMAPPING"], 2);
@@ -430,6 +441,32 @@ void initChannelFromJSON(char *channelString)
 		DMXpresent = true;
 		DMXCTRLChs += (String(channelID) + ",");
 	}
+	else if (strstr(channelJSON["TYPE"], "SWITCH"))
+	{
+		pinMode(channels[channelID].address1, OUTPUT);
+		digitalWrite(channels[channelID].address1, HIGH);
+		Serial.println("CONFIGURE AS SWITCH");
+		Serial.println(channels[channelID].address1);
+	}
+	else if (strstr(channelJSON["TYPE"], "ANALOG"))
+	{
+		pinMode(channels[channelID].address1, OUTPUT);
+		digitalWrite(channels[channelID].address1, HIGH);
+		Serial.println("CONFIGURE AS ANALOG");
+		Serial.println(channels[channelID].address1);
+	}
+	else if (strstr(channelJSON["TYPE"], "RGB"))
+	{
+		pinMode(channels[channelID].address1, OUTPUT);
+		digitalWrite(channels[channelID].address1, HIGH);
+
+		pinMode(channels[channelID].address2, OUTPUT);
+		digitalWrite(channels[channelID].address2, HIGH);
+
+		pinMode(channels[channelID].address3, OUTPUT);
+		digitalWrite(channels[channelID].address3, HIGH);
+	}
+
 	strncpy(channels[channelID].type, channelJSON["TYPE"], 10);
 
 	channelJSON.clear();
@@ -617,6 +654,9 @@ void sendChannelConfigJSON()
 		snprintf(charString, 50, "\"TYPE\":\"%s\",", channels[i].type);
 		strcat(bufferB, charString);
 
+		snprintf(charString, 50, "\"INVERSION\":\"%s\",", channels[i].inverted);
+		strcat(bufferB, charString);
+
 		snprintf(charString, 50, "\"CHMAPPING\":\"%s\",", channels[i].chmapping);
 		strcat(bufferB, charString);
 
@@ -684,7 +724,7 @@ void initializeChannels()
 	else
 	{
 		Serial.println("NO DMX");
-		dmx.end();
+		// dmx.end();
 	}
 }
 
@@ -847,6 +887,65 @@ void updateChannelfromJSON(String channelUpdate)
 
 	Serial.println("ch parse done");
 	channelUpdateJSON.clear();
+}
+
+void maintainFades()
+{
+	Serial.println("in maintain fades");
+	for (int i = 0; i < NUM_OF_CHANNELS; i++)
+	{
+		Serial.println("*****************");
+		Serial.println("CHANNEL");
+		Serial.println(i);
+		Serial.println(channels[i].fadeTime);
+		Serial.println("*****************");
+	}
+	lastFadeMaintain = millis()
+		delay(1000);
+}
+
+void maintainLocalChannels()
+{
+	Serial.println("in maintain");
+	for (int i = 0; i < NUM_OF_CHANNELS; i++)
+	{
+		Serial.println("*****************");
+		Serial.println("CHANNEL");
+		Serial.println(i);
+		Serial.println(channels[i].type);
+		Serial.println("*****************");
+		if (strstr(channels[i].type, "ANALOG"))
+		{
+			Serial.println("analog write");
+			Serial.println(channels[i].address1);
+			Serial.println(channels[i].address1Value);
+			Serial.println("COMPUTED");
+			Serial.println((int)((channels[i].address1Value / 100.0) * 1024));
+			analogWrite(channels[i].address1, (int)((channels[i].address1Value / 100.0) * 1024));
+		}
+		else if (strstr(channels[i].type, "SWITCH"))
+		{
+			Serial.println("digital write");
+			Serial.println(channels[i].address1);
+			Serial.println(channels[i].address1Value);
+			if (channels[i].address1Value > 50)
+			{
+				digitalWrite(channels[i].address1, HIGH);
+				Serial.println("high");
+			}
+			else
+			{
+				digitalWrite(channels[i].address1, LOW);
+				Serial.println("low");
+			}
+		}
+		else if (strstr(channels[i].type, "RGB"))
+		{
+			analogWrite(channels[i].address1, channels[i].address1Value);
+			analogWrite(channels[i].address2, channels[i].address2Value);
+			analogWrite(channels[i].address3, channels[i].address3Value);
+		}
+	}
 }
 
 ///////////////////////////
@@ -1178,7 +1277,7 @@ void updateLiferaft(char param, char value)
 
 void setup()
 {
-	// Serial.begin(250000); // Start the Serial communication to send messages to the computer
+	Serial.begin(250000); // Start the Serial communication to send messages to the computer
 	delay(10);
 	Serial.println('\n');
 
@@ -1258,9 +1357,9 @@ void setup()
 	// if (corruptionCheck > '2')
 	// {
 	// 	Serial.println("corruption check failed, remove file");
-	// 	f = SPIFFS.open("/channelSetup.dat", "w+");
-	// 	f.print("");
-	// 	f.close();
+	// f = SPIFFS.open("/channelSetup.dat", "w+");
+	// f.print("");
+	// f.close();
 	// 	// remove("/channelSetup.dat");
 	// }
 	// else
@@ -1270,6 +1369,7 @@ void setup()
 	// }
 
 	initializeChannels();
+	analogWriteFreq(3000);
 	// updateLiferaft('C', '0');
 	Serial.println("load completed");
 }
@@ -1279,6 +1379,9 @@ void loop(void)
 	if (DMXpresent) //helps to slow down to avoid overwhelming DMX devices
 		DMXmaintenance();
 	// DMXtest();
+
+	maintainLocalChannels();
+	maintainFades();
 
 	if (!validWIFI)
 	{
