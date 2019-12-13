@@ -4,38 +4,31 @@
 #include <ESP8266mDNS.h>
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
-// #include "cjson/cJSON.h"
-// #include "cjson/cJSON.c"
 #include "ArduinoJson.h"
-// #include "cJSON.h"
 #include <FS.h> // Include the SPIFFS library
 #include "espDMX.h"
 
+//Max number of channels or devices controlled
 #define NUM_OF_CHANNELS 10
 
+//predefine buffer variables
 String buffer = "";
-
 char bufferB[1024];
+//holds milliseconds from start to power fade and time based routines
+unsigned long lastFadeMaintain = millis();
 
-//GLOBAL CONFIG VARIABLES (filled out by SPIFF read of config.dat)
+//GLOBAL CONFIG VARIABLES, with default values (filled out by SPIFF read of config.dat)
 char nodename[64] = "DEFESPNode";
 // Node Description
 char nodedesc[64] = "DEFUnconfigured ESPNode";
-// WIFI Credentials. Set default as values in passwords.h
+
+// WIFI Credentials.
 char WIFIssid[64];
 char WIFIpassword[64];
-//remote location of IOS Files
-char IOSResources[] = "DEFioshit.net";
-
-//variables for WIFI
+//is this a valid wifi connection, if not node will revert to AP mode to allow configuration
 bool validWIFI = false;
 
-//DMX
-DMXESPSerial dmx;
-bool DMXpresent = false;
-String DMXCTRLChs = "";
-
-//setup for softAP if needed
+//setup for softAP if needed. This provides for configuration of the node when not sucessfully connected to WIFI
 const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 1, 1);
 DNSServer dnsServer;
@@ -45,23 +38,42 @@ ESP8266WebServer server(80);			// Create a webserver object that listens for HTT
 String getContentType(String filename); // convert the file extension to the MIME type
 bool handleFileRead(String path);		// send the right file to the client (if it exists)
 
-unsigned long lastFadeMaintain = millis();
+//remote location of IOS Files
+char IOSResources[] = "ioshit.net";
 
-//CHANNEL struct
+//DMX
+//provide dmx class
+DMXESPSerial dmx;
+//DMX maintenance routine only needs to be run if dmx devices are configured
+bool DMXpresent = false;
+
+//keep DMX channels in a buffer to provide to dmx maintainer function
+String DMXCTRLChs = "";
+
+
+//CHANNEL structure
+//Each device connected to the node will require a defined channel.
+//Subchannels provide support for RGB and other multi-channel fixtures
 struct channel
 {
 	//Channel name
 	char name[30];
 
+	//if inverted logic low is ON
 	bool inverted;
 
 	//Channel type
-	//0=UNSET
-	//1=Analog
-	//2=PWM
-	//5=DMX
+	//ANALOG - Dimmable channel connected directly to ESP
+	//SWITCH - On/off channel connected directly to ESP
+	//RGB - 3 channel device connected directly to ESP. Each channel dimmable
+	//DMXSWITCH - On/off channel connected via DMX
+	//DMXANALOG - Dimmable channel connected via DMX
+	//DMXRGB - 3 channel device connected via DMX. Each channel dimmable
+	//EMPTY - Undefined channel
 	char type[10];
 
+	//***************is this still needed
+	
 	//Mapping of channels
 	//01=Single Channel
 	//03=RGB
@@ -70,100 +82,107 @@ struct channel
 	//13=RGB w/ Control
 	char chmapping[2];
 
-	//
+	//DMX address of control/fade function (only needed for certain fixtures)
 	unsigned short int CTRLAddress;
+	//DMX address or GPIO pin of subchannels
 	unsigned short int address1;
 	unsigned short int address2;
 	unsigned short int address3;
 
+	//Value of all subchannels. For fades, this is the destination value
 	unsigned short int CTRLValue;
 	unsigned short int address1Value;
 	unsigned short int address2Value;
 	unsigned short int address3Value;
 	unsigned short int valueSetTime;
 
+	//if non-zero fixture is in a fade. This is the time remaining
 	unsigned short int fadeTime;
+
+	//contains current value and fade step for each 1/10 of a second. CTRLval,addr1val,addr2val,addr3val/CTRLstep,addr1step,addr2step,addr3step
 	char fadeScratch[10];
 };
 
 //array of channels, not zero indexed
 struct channel channels[(NUM_OF_CHANNELS + 1)];
-///////////////////////////
-///////////////////////////
-///////////////////////////
-///////////////////////////
+
+
 ///////////////////////////
 ///////////////////////////
 /////CONFIG FUNCTIONS//////
 ///////////////////////////
 ///////////////////////////
-///////////////////////////
-///////////////////////////
-///////////////////////////
-///////////////////////////
 
 //read config file
 void loadConfigJSONSettings(File f)
-{
-
+{	
+	//buffer for line
 	char line[512];
+
+	//KV pair being processed
 	char *key, *value;
+
+	//line chancount
 	int charcount;
 
 	// read file line by line
 	while (f.available())
 	{
-		// memset(&line[0], 0, sizeof(line));
+		//get number of characters in line to add string terminator
 		charcount = f.readBytesUntil(',', line, 128);
+		//add string terminator to end
 		line[charcount] = '\0';
-		// Serial.println("!!!!!!!!!!!!!!!!!");
-		// Serial.println(line);
-		// Serial.println("!!!!!!!!!!!!!!!!!");
-		// Serial.print(line[0]);
+
+		//find first key in JSON
+
+		//if there is a " from the http string
 		if (line[0] == '"' && line != NULL)
 		{
+			//shift line over by 1
 			memmove(line + 1, line, strlen(line) + 1);
+			//replace first character with a space
 			line[0] = ' ';
-			// Serial.println("line shifted");
-			// Serial.println(line);
 		}
 
+		//start looking for key
+		//trash any characters before " 
 		key = strtok(line, "\"");
 
+		//if the key is not null (because no opening " was found) and the string terminator hasn't been reached
 		while (key != NULL && line[0] != '\0')
 		{
-			// Serial.println("***************");
-			// Serial.println(line);
+			//key is text up until "
 			key = strtok(NULL, "\"");
-			// Serial.println("KEY:");
 
+			//if there is no key
 			if (!key)
 			{
-				// Serial.println("loop break");
+				//break out of loop
 				break;
 			}
-			// Serial.println(key);
 
 			//check to see if this is a key we want a value for
+
+			//config header can be ignored
 			if (strcmp(key, "ESPconfig") == 0)
 			{
-				// Serial.println("header--ignore");
 			}
+			//WIFI SSID
 			else if (strcmp(key, "WIFISSID") == 0)
 			{
-				// Serial.println("wifissidset");
+				//value is text between " "					
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
+				//copy into memory
 				strcpy(WIFIssid, value);
 			}
+			//WIFI Password
 			else if (strcmp(key, "WIFIPW") == 0)
 			{
 				// Serial.println("wifipwset");
-
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
-				// Serial.print("wifi pw");
-				// Serial.print(value);
+				//copy into memory
 				strcpy(WIFIpassword, value);
 			}
 			else if (strcmp(key, "NODENAME") == 0)
@@ -202,6 +221,7 @@ void loadConfigJSONSettings(File f)
 	}
 }
 
+//build configuration JSON to send to browser
 String getConfigJSON()
 {
 	buffer = "";
@@ -221,16 +241,23 @@ String getConfigJSON()
 	return buffer;
 }
 
+//write configuration buffer to SD card
 void saveConfigJSON(String configBuffer)
 {
+	//open (and create if needed) SPIFF file in write mode
 	File f = SPIFFS.open("/config.dat", "w+");
+
+	//if file can't be open because of a SPIFFS error
 	if (!f)
 	{
+		//print message to debug serial
 		Serial.println("file open failed");
 	}
 	else
 	{
+		//write buffer string to file
 		f.print(configBuffer);
+		//confirm config written
 		Serial.println("config written");
 		Serial.println("resetting node");
 		f.close();

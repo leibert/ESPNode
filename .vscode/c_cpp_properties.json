@@ -7,7 +7,9 @@
                 "C:\\Users\\cwmcc\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.5.0\\**",
                 "C:\\Users\\cwmcc\\source\\repos\\ESPNode\\**",
                 "C:\\Users\\cwmcc\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.1\\**",
-                "C:\\Users\\cwmcc\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**"
+                "C:\\Users\\cwmcc\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
+                "/home/leibert/.arduino15/packages/esp8266/hardware/esp8266/2.5.2/**",
+                "/home/leibert/.arduino15/packages/esp8266/tools/**"
             ],
             "forcedInclude": [],
             "intelliSenseMode": "msvc-x64",
