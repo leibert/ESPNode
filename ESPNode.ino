@@ -50,7 +50,6 @@ bool DMXpresent = false;
 //keep DMX channels in a buffer to provide to dmx maintainer function
 String DMXCTRLChs = "";
 
-
 //CHANNEL structure
 //Each device connected to the node will require a defined channel.
 //Subchannels provide support for RGB and other multi-channel fixtures
@@ -73,7 +72,7 @@ struct channel
 	char type[10];
 
 	//***************is this still needed
-	
+
 	//Mapping of channels
 	//01=Single Channel
 	//03=RGB
@@ -89,7 +88,7 @@ struct channel
 	unsigned short int address2;
 	unsigned short int address3;
 
-	//Value of all subchannels. For fades, this is the destination value
+	//Value of all subchannels. For fades, this is the current value
 	unsigned short int CTRLValue;
 	unsigned short int address1Value;
 	unsigned short int address2Value;
@@ -99,13 +98,20 @@ struct channel
 	//if non-zero fixture is in a fade. This is the time remaining
 	unsigned short int fadeTime;
 
-	//contains current value and fade step for each 1/10 of a second. CTRLval,addr1val,addr2val,addr3val/CTRLstep,addr1step,addr2step,addr3step
-	char fadeScratch[10];
+	//contains destination value and fade step for each 1/10 of a second. CTRLval,addr1val,addr2val,addr3val/CTRLstep,addr1step,addr2step,addr3step
+	char fadeScratch[40];
+
+	float address1fadeStep;
+	float address2fadeStep;
+	float address3fadeStep;
+
+	unsigned short int address1fadeDest;
+	unsigned short int address2fadeDest;
+	unsigned short int address3fadeDest;
 };
 
 //array of channels, not zero indexed
 struct channel channels[(NUM_OF_CHANNELS + 1)];
-
 
 ///////////////////////////
 ///////////////////////////
@@ -115,7 +121,7 @@ struct channel channels[(NUM_OF_CHANNELS + 1)];
 
 //read config file
 void loadConfigJSONSettings(File f)
-{	
+{
 	//buffer for line
 	char line[512];
 
@@ -145,7 +151,7 @@ void loadConfigJSONSettings(File f)
 		}
 
 		//start looking for key
-		//trash any characters before " 
+		//trash any characters before "
 		key = strtok(line, "\"");
 
 		//if the key is not null (because no opening " was found) and the string terminator hasn't been reached
@@ -170,7 +176,7 @@ void loadConfigJSONSettings(File f)
 			//WIFI SSID
 			else if (strcmp(key, "WIFISSID") == 0)
 			{
-				//value is text between " "					
+				//value is text between " "
 				value = strtok(NULL, "\"");
 				value = strtok(NULL, "\"");
 				//copy into memory
@@ -451,6 +457,15 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(channels[channelID].address2);
 	Serial.println(channels[channelID].address3);
 
+	if (channelJSON["INVERSION"] == "1")
+	{
+		channels[channelID].inverted = true;
+	}
+	else
+	{
+		channels[channelID].inverted = false;
+	}
+
 	Serial.println(channelJSON["NAME"].as<char *>());
 	Serial.println(channelJSON["ADDRESSING"].as<char *>());
 
@@ -681,7 +696,7 @@ void sendChannelConfigJSON()
 		snprintf(charString, 50, "\"TYPE\":\"%s\",", channels[i].type);
 		strcat(bufferB, charString);
 
-		snprintf(charString, 50, "\"INVERSION\":\"%s\",", channels[i].inverted);
+		snprintf(charString, 50, "\"INVERSION\":\"%d\",", channels[i].inverted);
 		strcat(bufferB, charString);
 
 		snprintf(charString, 50, "\"CHMAPPING\":\"%s\",", channels[i].chmapping);
@@ -904,13 +919,28 @@ void updateChannelfromJSON(String channelUpdate)
 	Serial.println(channelUpdateJSON["CTRLValue"].as<char *>());
 	channels[channelID].CTRLValue = channelUpdateJSON["CTRLValue"];
 
-	channels[channelID].address1Value = channelUpdateJSON["AValue"];
-	Serial.println("saved value");
-	Serial.println(channels[channelID].address1Value);
+	if (channelUpdateJSON["fadeTime"].as<int>() > 0)
+	{
+		Serial.println("saving fade");
+		Serial.println(channelUpdateJSON["fadeTime"].as<int>());
+		channels[channelID].fadeTime = channelUpdateJSON["fadeTime"];
+		channels[channelID].address1fadeDest = channelUpdateJSON["AValue"];
+		channels[channelID].address2fadeDest = channelUpdateJSON["BValue"];
+		channels[channelID].address3fadeDest = channelUpdateJSON["CValue"];
+	}
+	else
+	{
+		Serial.println("saved NONfade");
+		Serial.println(channels[channelID].address1Value);
+		channels[channelID].address1Value = channelUpdateJSON["AValue"];
+		channels[channelID].address1fadeDest = channelUpdateJSON["AValue"];
 
-	channels[channelID].address2Value = channelUpdateJSON["BValue"];
+		channels[channelID].address2Value = channelUpdateJSON["BValue"];
+		channels[channelID].address2fadeDest = channelUpdateJSON["BValue"];
 
-	channels[channelID].address3Value = channelUpdateJSON["CValue"];
+		channels[channelID].address3Value = channelUpdateJSON["CValue"];
+		channels[channelID].address3fadeDest = channelUpdateJSON["CValue"];
+	}
 
 	Serial.println("ch parse done");
 	channelUpdateJSON.clear();
@@ -918,52 +948,97 @@ void updateChannelfromJSON(String channelUpdate)
 
 void maintainFades()
 {
+
+	//contains current value and fade step for each 1/10 of a second. CTRLval,addr1val,addr2val,addr3val/CTRLstep,addr1step,addr2step,addr3step
+	// char fadeScratch[10];
+	char fadeScratcher[40];
+	char newFadeScratch[40];
+	int bufferNum;
+
 	Serial.println("in maintain fades");
 	for (int i = 0; i < NUM_OF_CHANNELS; i++)
 	{
 		Serial.println("*****************");
 		Serial.println("CHANNEL");
+		Serial.println(channels[i].fadeScratch);
+		strcpy(fadeScratcher, channels[i].fadeScratch);
+
+		Serial.printf("Last Fade %i", lastFadeMaintain);
+		Serial.printf("Delta is", millis() - lastFadeMaintain);
+
+		//hasn't been long enough since last fade
+		if ((millis() - lastFadeMaintain < 100))
+		{
+			return;
+		}
+
+		//check if a fade is being attempted
+		if (channels[i].address1Value != channels[i].address1fadeDest)
+		{
+			//no active fade...just set the channel to where it's supposed to go
+			if (channels[i].fadeTime == 0)
+			{
+				channels[i].address1Value = channels[i].address1fadeDest;
+			}
+			else if (channels[i].address1fadeStep == 0)
+			{
+				channels[i].address1fadeStep = (channels[i].address1fadeDest - channels[i].address1Value) / channels[i].fadeTime;
+				Serial.printf("fade time %i", channels[i].fadeTime);
+				Serial.printf("fade step computed %f", channels[i].address1fadeStep);
+			}
+			else
+			{
+				Serial.printf("new value computed %i", (int)(((millis() - lastFadeMaintain) * channels[i].address1fadeStep) + channels[i].address1Value));
+				channels[i].address1Value = (int)(((millis() - lastFadeMaintain) * channels[i].address1fadeStep) + channels[i].address1Value);
+			}
+		}
+
+		// bufferNum = (int)strok(fadeScratcher, ",");
+
+		// Serial.printf("Last Fade %s", strok(fadeScratcher, ","));
+
 		Serial.println(i);
 		Serial.println(channels[i].fadeTime);
 		Serial.println("*****************");
 	}
-	lastFadeMaintain = millis()
-		delay(1000);
+
+	lastFadeMaintain = millis();
+	delay(100);
 }
 
 void maintainLocalChannels()
 {
-	Serial.println("in maintain");
+	// Serial.println("in maintain");
 	for (int i = 0; i < NUM_OF_CHANNELS; i++)
 	{
-		Serial.println("*****************");
-		Serial.println("CHANNEL");
-		Serial.println(i);
-		Serial.println(channels[i].type);
-		Serial.println("*****************");
+		// Serial.println("*****************");
+		// Serial.println("CHANNEL");
+		// Serial.println(i);
+		// Serial.println(channels[i].type);
+		// Serial.println("*****************");
 		if (strstr(channels[i].type, "ANALOG"))
 		{
-			Serial.println("analog write");
-			Serial.println(channels[i].address1);
-			Serial.println(channels[i].address1Value);
-			Serial.println("COMPUTED");
-			Serial.println((int)((channels[i].address1Value / 100.0) * 1024));
+			// Serial.println("analog write");
+			// Serial.println(channels[i].address1);
+			// Serial.println(channels[i].address1Value);
+			// Serial.println("COMPUTED");
+			// Serial.println((int)((channels[i].address1Value / 100.0) * 1024));
 			analogWrite(channels[i].address1, (int)((channels[i].address1Value / 100.0) * 1024));
 		}
 		else if (strstr(channels[i].type, "SWITCH"))
 		{
-			Serial.println("digital write");
-			Serial.println(channels[i].address1);
-			Serial.println(channels[i].address1Value);
+			// Serial.println("digital write");
+			// Serial.println(channels[i].address1);
+			// Serial.println(channels[i].address1Value);
 			if (channels[i].address1Value > 50)
 			{
 				digitalWrite(channels[i].address1, HIGH);
-				Serial.println("high");
+				// Serial.println("high");
 			}
 			else
 			{
 				digitalWrite(channels[i].address1, LOW);
-				Serial.println("low");
+				// Serial.println("low");
 			}
 		}
 		else if (strstr(channels[i].type, "RGB"))
@@ -1403,12 +1478,13 @@ void setup()
 
 void loop(void)
 {
-	if (DMXpresent) //helps to slow down to avoid overwhelming DMX devices
-		DMXmaintenance();
+	// if (DMXpresent) //helps to slow down to avoid overwhelming DMX devices
+	// 	DMXmaintenance();
 	// DMXtest();
 
-	maintainLocalChannels();
-	maintainFades();
+	// maintainLocalChannels();
+	delay(1);
+	// maintainFades();
 
 	if (!validWIFI)
 	{
@@ -1417,5 +1493,5 @@ void loop(void)
 	}
 	// Serial.println("333AAA");
 	server.handleClient();
-	delay(10);
+	// delay(10);
 }

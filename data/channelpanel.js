@@ -264,6 +264,22 @@ function createSwitchElement(channelID, subchannel = 1, value = 0, label = 'Outp
     return switchElement
 }
 
+function fadeController() {
+    var fadeController = $('<span>').addClass("fadeController custom-control custom-switch");
+    var fadeSwitch = $('<span>').addClass("custom-control custom-switch");
+    fadeSwitch.append('<input type="checkbox" class="custom-control-input channelFadeSwitch" id="channelFadeSwitch' + channelID + '">');
+    fadeSwitch.append('<label class="custom-control-label" for="channelFadeSwitch' + channelID + '">Fade this channel</label>');
+    fadeController.append(fadeSwitch);
+
+
+    var fadeTimeField = $('<tr>').addClass('fadeTimeField');
+    fadeTimeField.append('<td><label class="fadeTimeField-label" for="fadeTimeField' + channelID + 's' + subchannel + '"subchannel="' + subchannel + '">' + label + ': </label></td>');
+    fadeTimeField.append('<td><input type="number" class="fadeTimeField" id="fadeTimeField' + channelID + 's' + subchannel + '" subchannel="' + subchannel + '" value="' + pinout + '" size="5"></td>');
+    fadeController.append(fateTimeField);
+
+
+}
+
 
 function channelControllerDOM(channelID) {
     channel = channelConfigData[channelID];
@@ -283,11 +299,6 @@ function channelControllerDOM(channelID) {
             }
         });
     }
-
-
-
-
-
 
     // var controllerDOM = $('');
     var controllerDOM = $('<div>');
@@ -329,6 +340,9 @@ function channelControllerDOM(channelID) {
 
     }
 
+
+
+
     return controllerDOM
 }
 
@@ -363,6 +377,21 @@ function channelEditorDOM(channelID) {
         }));
     });
     typeSelector.val(channelType);
+
+
+    var invertSwitch = $('<span>').addClass("custom-control custom-switch");
+    invertSwitch.append('<input type="checkbox" class="custom-control-input channelInvertSwitch" id="channelInvertSwitch' + channelID + '">');
+    invertSwitch.append('<label class="custom-control-label" for="channelInvertSwitch' + channelID + '">Invert this channel</label>');
+    channelTypePanel.append(invertSwitch);
+
+    if (channel.inversion) {
+        invertSwitch.find('.channelInvertSwitch').prop('checked', 'true');
+    }
+
+
+
+
+
     channelTypePanel.append(typeSelector);
 
 
