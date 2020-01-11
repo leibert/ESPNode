@@ -356,7 +356,6 @@ function createChannelEditField(channelID, subchannel, pinout = 0, label = 'Outp
 }
 
 function channelEditorDOM(channelID) {
-
     var channel = channelConfigData[channelID];
 
 
@@ -384,7 +383,8 @@ function channelEditorDOM(channelID) {
     invertSwitch.append('<label class="custom-control-label" for="channelInvertSwitch' + channelID + '">Invert this channel</label>');
     channelTypePanel.append(invertSwitch);
 
-    if (channel.inversion) {
+
+    if (channel.INVERSION == "1") {
         invertSwitch.find('.channelInvertSwitch').prop('checked', 'true');
     }
 
@@ -462,7 +462,7 @@ function channelEditorDOM(channelID) {
 
 
 function saveChannelConfig(channelID, mode = "SAVE") {
-
+    // debugger
     console.log('new value is', $('.channelObject[channelid=' + channelID + '] .channelTypeSelector').val());
 
     updatedChannel = {};
@@ -470,34 +470,33 @@ function saveChannelConfig(channelID, mode = "SAVE") {
 
         var addressing = [0, 0, 0, 0];
 
-        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=1]').val() > 0) {
-            addressing[0] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=1]').val();
+        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=CTR]').val() > 0) {
+            addressing[0] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=CTR]').val();
         }
         else {
             addressing[0] = 0;
         }
 
-        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=2]').val() > 0) {
-            addressing[1] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=2]').val();
+        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=1]').val() > 0) {
+            addressing[1] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=1]').val();
         }
         else {
             addressing[1] = 0;
         }
 
-        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=3]').val() > 0) {
-            addressing[2] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=3]').val();
+        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=2]').val() > 0) {
+            addressing[2] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=2]').val();
         }
         else {
             addressing[2] = 0;
         }
 
-        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=4]').val() > 0) {
-            addressing[3] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=4]').val();
+        if ($('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=3]').val() > 0) {
+            addressing[3] = $('.channelObject[channelid=' + channelID + '] .channelEditField[subchannel=3]').val();
         }
         else {
             addressing[3] = 0;
         }
-
 
 
         updatedChannel["ADDRESSING"] = addressing.join(',');
@@ -505,6 +504,7 @@ function saveChannelConfig(channelID, mode = "SAVE") {
         updatedChannel["NAME"] = $('.channelName[ajax_targetobjectid=' + channelID + '] .editableItemValue').html();
         updatedChannel["TYPE"] = $('.channelObject[channelid=' + channelID + '] .channelTypeSelector').val();
         updatedChannel["CHANNELID"] = channelID;
+        updatedChannel["INVERSION"] = String($('.channelObject[channelid=' + channelID + '] .channelInvertSwitch').prop('checked'));
     }
     else if (mode == "DELETE") {
         if (channelID == numberOfChannels) {
@@ -605,7 +605,10 @@ function pushChannelConfigJSONtoNode() {
 
 $(document).on('click', '.saveChannelConfigButton', function () {
     var channelID = $(this).parent().parent().parent().attr('channelID');
+
+    saveChannelConfig(channelID);
     $('.channelObject[channelid=' + channelID + '] .channelEditSwitch').prop('checked', false).trigger("change");
+    // debugger
 
     pushChannelConfigJSONtoNode();
     console.log('save button:', channelID);
@@ -637,7 +640,7 @@ $(document).on('change', '.channelEditSwitch', function () {
         $('.channelObject[channelid=' + channelID + '] .channelControllerContainer').html(channelEditorDOM(channelID));
     }
     else {
-        saveChannelConfig(channelID);
+        // saveChannelConfig(channelID);
         $('.channelObject[channelid=' + channelID + '] .channelControllerContainer').html(channelControllerDOM(channelID));
 
     }

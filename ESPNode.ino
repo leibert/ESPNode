@@ -416,6 +416,13 @@ void initChannelFromJSON(char *channelString)
 		return;
 	}
 
+	//check if there is a channel delete command
+	Serial.println(strstr(channelJSON["TYPE"], "DELETE"));
+	if (strstr(channelJSON["TYPE"], "DELETE"))
+	{
+		return;
+	}
+
 	//GET CHANNEL ID
 	int channelID = channelJSON["CHANNELID"];
 	Serial.println("channel ID is:");
@@ -445,11 +452,12 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(holder);
 	holder = strtok(holder, ",");
 	Serial.println(holder);
-	channels[channelID].address1 = atoi(strdup(holder));
+	channels[channelID].CTRLAddress = atoi(strdup(holder));
+
 	Serial.println(holder);
+	channels[channelID].address1 = atoi(strtok(NULL, ","));
 	channels[channelID].address2 = atoi(strtok(NULL, ","));
 	channels[channelID].address3 = atoi(strtok(NULL, ","));
-	channels[channelID].CTRLAddress = atoi(strtok(NULL, ","));
 
 	Serial.println("SEGMENTS ARE:");
 	Serial.println(channels[channelID].CTRLAddress);
@@ -457,7 +465,7 @@ void initChannelFromJSON(char *channelString)
 	Serial.println(channels[channelID].address2);
 	Serial.println(channels[channelID].address3);
 
-	if (channelJSON["INVERSION"] == "1")
+	if (channelJSON["INVERSION"] == "true")
 	{
 		channels[channelID].inverted = true;
 	}
@@ -930,7 +938,9 @@ void updateChannelfromJSON(String channelUpdate)
 	}
 	else
 	{
-		Serial.println("saved NONfade");
+		Serial.println("saved NONfade -- output pin");
+		Serial.println(channels[channelID].address1);
+		Serial.println("saved value");
 		Serial.println(channels[channelID].address1Value);
 		channels[channelID].address1Value = channelUpdateJSON["AValue"];
 		channels[channelID].address1fadeDest = channelUpdateJSON["AValue"];
@@ -940,6 +950,17 @@ void updateChannelfromJSON(String channelUpdate)
 
 		channels[channelID].address3Value = channelUpdateJSON["CValue"];
 		channels[channelID].address3fadeDest = channelUpdateJSON["CValue"];
+	}
+
+	//check for INVERSION
+	if (channels[channelID].inverted)
+	{
+		channels[channelID].address1Value = abs(100 - channels[channelID].address1Value);
+		channels[channelID].address2Value = abs(100 - channels[channelID].address2Value);
+		channels[channelID].address3Value = abs(100 - channels[channelID].address3Value);
+		channels[channelID].address1fadeDest = abs(100 - channels[channelID].address1fadeDest);
+		channels[channelID].address2fadeDest = abs(100 - channels[channelID].address2fadeDest);
+		channels[channelID].address3fadeDest = abs(100 - channels[channelID].address3fadeDest);
 	}
 
 	Serial.println("ch parse done");
@@ -1011,6 +1032,7 @@ void maintainLocalChannels()
 	// Serial.println("in maintain");
 	for (int i = 0; i < NUM_OF_CHANNELS; i++)
 	{
+
 		// Serial.println("*****************");
 		// Serial.println("CHANNEL");
 		// Serial.println(i);
@@ -1382,6 +1404,8 @@ void setup()
 	Serial.begin(250000); // Start the Serial communication to send messages to the computer
 	delay(10);
 	Serial.println('\n');
+	Serial.println('SERIAL LOADED');
+	Serial.println('BOARD INITING');
 
 	SPIFFS.begin(); // Start the SPI Flash Files System
 
@@ -1478,11 +1502,11 @@ void setup()
 
 void loop(void)
 {
-	// if (DMXpresent) //helps to slow down to avoid overwhelming DMX devices
-	// 	DMXmaintenance();
+	if (DMXpresent) //helps to slow down to avoid overwhelming DMX devices
+		DMXmaintenance();
 	// DMXtest();
 
-	// maintainLocalChannels();
+	maintainLocalChannels();
 	delay(1);
 	// maintainFades();
 
